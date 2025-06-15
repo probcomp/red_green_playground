@@ -1,1 +1,1 @@
-web: npm run build && python create_stimuli.py
+web: npm run build && python red_green_playground.py
