@@ -219,7 +219,6 @@ function App() {
 
   // Saving and Loading params
   const [trial_name, setTrial_name] = useState('base'); // Default res multiplier
-  // const [selectedDirectory, setSelectedDirectory] = useState("/Users/arijitdasgupta/Desktop/projects/mental_physics_trials/exp_planning_1");
 
   const worldHeight = 20;
   const worldWidth = 20;
