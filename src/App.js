@@ -3,42 +3,106 @@ import { Rnd } from "react-rnd";
 
 const vid_res = 400;
 
-const VideoPlayer = ({ videoData, width =vid_res, height =vid_res, fps}) => {
+
+const VideoPlayer = ({ simData, width = vid_res, height = vid_res, fps }) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
   const animationRef = useRef(null);
   const lastFrameTime = useRef(0);
-  const [videoBlob, setVideoBlob] = useState(null);
 
-  // Memoize video dimensions
-  const dimensions = {
-    T: videoData.length,
-    N: videoData[0].length,
-    M: videoData[0][0].length,
-  };
+  // Extract dimensions from simData
+  const numFrames = simData ? simData.num_frames : 0;
+  const worldWidth = simData ? simData.scene_dims[0] : 20;
+  const worldHeight = simData ? simData.scene_dims[1] : 20;
+  const interval = simData ? simData.interval : 0.1;
+
+  // Calculate canvas dimensions based on simulation parameters
+  const canvasWidth = Math.floor(worldWidth / interval);
+  const canvasHeight = Math.floor(worldHeight / interval);
 
   useEffect(() => {
+    if (!simData) return;
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     
     const renderFrame = (frameIndex) => {
-      const frame = videoData[frameIndex];
-      const imageData = ctx.createImageData(dimensions.M, dimensions.N);
-      const data = imageData.data; // Avoid repeated property access
-      let pixelIndex = 0; // Single index for flat array access
-    
-      for (let i = 0; i < dimensions.N; i++) {
-        for (let j = 0; j < dimensions.M; j++) {
-          const pixel = frame[i][j]; // Cache the pixel data
-          data[pixelIndex++] = pixel[0]; // R
-          data[pixelIndex++] = pixel[1]; // G
-          data[pixelIndex++] = pixel[2]; // B
-          data[pixelIndex++] = 255;      // A (fully opaque)
-        }
+      // Clear canvas
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Render sensors first 
+      if (simData.green_sensor) {
+        const sensor = simData.green_sensor;
+        ctx.fillStyle = 'rgb(0, 255, 0)';
+        
+        // Convert world coordinates to canvas coordinates
+        const canvasX = (sensor.x / worldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((sensor.y + sensor.height) / worldHeight) * canvasHeight;
+        const canvasWidth_sensor = (sensor.width / worldWidth) * canvasWidth;
+        const canvasHeight_sensor = (sensor.height / worldHeight) * canvasHeight;
+        
+        ctx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
       }
-    
-      ctx.putImageData(imageData, 0, 0);
+
+      if (simData.red_sensor) {
+        const sensor = simData.red_sensor;
+        ctx.fillStyle = 'rgb(255, 0, 0)';
+        
+        // Convert world coordinates to canvas coordinates
+        const canvasX = (sensor.x / worldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((sensor.y + sensor.height) / worldHeight) * canvasHeight;
+        const canvasWidth_sensor = (sensor.width / worldWidth) * canvasWidth;
+        const canvasHeight_sensor = (sensor.height / worldHeight) * canvasHeight;
+        
+        ctx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
+      }
+
+      // Render barriers
+      simData.barriers.forEach(barrier => {
+        ctx.fillStyle = 'rgb(0, 0, 0)';
+        
+        // Convert world coordinates to canvas coordinates
+        const canvasX = (barrier.x / worldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((barrier.y + barrier.height) / worldHeight) * canvasHeight;
+        const canvasWidth_barrier = (barrier.width / worldWidth) * canvasWidth;
+        const canvasHeight_barrier = (barrier.height / worldHeight) * canvasHeight;
+        
+        ctx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
+      }); 
+
+      // Render target if frame data exists
+      if (simData.step_data && simData.step_data[frameIndex]) {
+        const targetData = simData.step_data[frameIndex];
+        const targetSize = simData.target.size;
+        const radius = targetSize / 2;
+        const tx = targetData.x;
+        const ty = targetData.y;
+
+        // Convert world coordinates to canvas coordinates
+        const canvasX = (tx + radius) * (canvasWidth / worldWidth);
+        const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / worldHeight));
+        const canvasRadius = radius * (canvasWidth / worldWidth);
+
+        ctx.fillStyle = 'rgb(0, 0, 255)';
+        ctx.beginPath();
+        ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      // Render occluders last
+      simData.occluders.forEach(occluder => {
+        ctx.fillStyle = 'rgb(128, 128, 128)';
+        
+        // Convert world coordinates to canvas coordinates
+        const canvasX = (occluder.x / worldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((occluder.y + occluder.height) / worldHeight) * canvasHeight;
+        const canvasWidth_occluder = (occluder.width / worldWidth) * canvasWidth;
+        const canvasHeight_occluder = (occluder.height / worldHeight) * canvasHeight;
+        
+        ctx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
+      }); 
     };
 
     const animate = (timestamp) => {
@@ -47,9 +111,9 @@ const VideoPlayer = ({ videoData, width =vid_res, height =vid_res, fps}) => {
       const elapsed = timestamp - lastFrameTime.current;
       const frameTime = 1000 / fps;
 
-      if (elapsed > frameTime*0.98) {
+      if (elapsed > frameTime * 0.98) {
         setCurrentFrame(prev => {
-          const nextFrame = (prev + 1) % dimensions.T;
+          const nextFrame = (prev + 1) % numFrames;
           renderFrame(nextFrame);
           return nextFrame;
         });
@@ -61,8 +125,8 @@ const VideoPlayer = ({ videoData, width =vid_res, height =vid_res, fps}) => {
       }
     };
 
-    // // Initial render
-    // renderFrame(currentFrame);
+    // Initial render
+    renderFrame(currentFrame);
 
     // Handle playback
     if (isPlaying) {
@@ -74,7 +138,7 @@ const VideoPlayer = ({ videoData, width =vid_res, height =vid_res, fps}) => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, videoData, dimensions.T, dimensions.N, dimensions.M]);
+  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps]);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -83,96 +147,42 @@ const VideoPlayer = ({ videoData, width =vid_res, height =vid_res, fps}) => {
   const handleSeek = (e) => {
     const seekPosition = parseInt(e.target.value);
     setCurrentFrame(seekPosition);
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const frame = videoData[seekPosition];
-    
-    const imageData = ctx.createImageData(dimensions.M, dimensions.N);
-    for (let i = 0; i < dimensions.N; i++) {
-      for (let j = 0; j < dimensions.M; j++) {
-        const pixelIndex = (i * dimensions.M + j) * 4;
-        imageData.data[pixelIndex] = frame[i][j][0];     // R
-        imageData.data[pixelIndex + 1] = frame[i][j][1]; // G
-        imageData.data[pixelIndex + 2] = frame[i][j][2]; // B
-        imageData.data[pixelIndex + 3] = 255;            // A
-      }
-    }
-    ctx.putImageData(imageData, 0, 0);
   };
 
 
-  const handleDownload = () => {
-    const canvas = canvasRef.current;
-
-    const stream = canvas.captureStream(fps); // Capture canvas as video stream
-    const mediaRecorder = new MediaRecorder(stream);
-    const chunks = [];
-
-    mediaRecorder.ondataavailable = (e) => {
-      chunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-
-      // Set video blob for download
-      setVideoBlob(blob);
-
-      // Automatically trigger download
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "video.webm";
-      a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    // Start recording and playback for the duration of the video
-    mediaRecorder.start();
-
-    let frameIndex = 0;
-    const interval = setInterval(() => {
-      const ctx = canvas.getContext("2d");
-      const frame = videoData[frameIndex];
-      const imageData = ctx.createImageData(dimensions.M, dimensions.N);
-      const data = imageData.data;
-      let pixelIndex = 0;
-
-      for (let i = 0; i < dimensions.N; i++) {
-        for (let j = 0; j < dimensions.M; j++) {
-          const pixel = frame[i][j];
-          data[pixelIndex++] = pixel[0];
-          data[pixelIndex++] = pixel[1];
-          data[pixelIndex++] = pixel[2];
-          data[pixelIndex++] = 255;
-        }
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-      frameIndex++;
-
-      if (frameIndex >= dimensions.T) {
-        clearInterval(interval);
-        mediaRecorder.stop();
-      }
-    }, 1000 / fps);
-  };
+  if (!simData) {
+    return (
+      <div
+        style={{
+          width: `${width}px`,
+          height: `${height}px`,
+          border: "1px solid black",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#f5f5f5",
+        }}
+      >
+        <p>No simulation data available. Run a simulation first.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
-    <canvas
-      ref={canvasRef}
-      width={dimensions.M}
-      height={dimensions.N}
-      style={{
-        width: `${width}px`,
-        height: `${height}px`,
-        objectFit: 'contain',
-        border: '2px solid black', // Visible border around the video
-        boxSizing: 'border-box',   // Ensures the border is included in the dimensions
-      }}
-    />
+      <canvas
+        ref={canvasRef}
+        width={canvasWidth}
+        height={canvasHeight}
+        style={{
+          width: `${width}px`,
+          height: `${height}px`,
+          objectFit: 'contain',
+          border: '2px solid black',
+          boxSizing: 'border-box',
+          imageRendering: 'pixelated', // Keep pixels crisp when scaling
+        }}
+      />
       <div className="flex flex-col gap-2">
         <button
           onClick={handlePlayPause}
@@ -183,20 +193,14 @@ const VideoPlayer = ({ videoData, width =vid_res, height =vid_res, fps}) => {
         <input
           type="range"
           min="0"
-          max={dimensions.T - 1}
+          max={numFrames - 1}
           value={currentFrame}
           onChange={handleSeek}
           className="w-full"
         />
         <div className="text-sm text-gray-600">
-          Frame: {currentFrame + 1} / {dimensions.T}
+          Frame: {currentFrame + 1} / {numFrames}
         </div>
-        <button
-          onClick={handleDownload}
-          className="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          Download Video
-        </button>
       </div>
     </div>
   );
@@ -207,7 +211,7 @@ function App() {
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, entityId: null });
   const [targetDirection, setTargetDirection] = useState(0); // Angle in radians
   const [targetSpeed, setTargetSpeed] = useState(0); // Speed in intervals of 0.1
-  const [videoData, setVideoData] = useState(null); // State to hold the video data
+  const [simData, setSimData] = useState(null); // State to hold the simulation data
 
   // Simulation parameters
   const [numFrames, setNumFrames] = useState(300);
@@ -415,7 +419,7 @@ function App() {
 
   const clearAllEntities = () => {
     setEntities([]);
-    setVideoData(null);
+    setSimData(null);
     setContextMenu({ visible: false, x: 0, y: 0, entityId: null });
   };
 
@@ -442,7 +446,7 @@ function App() {
       .then((response) => response.json())
       .then((data) => {
         if (data.status === "success") {
-          setVideoData(data.viz_array); // Store the video data in state
+          setSimData(data.sim_data); // Store the simulation data instead of viz_array
         } else {
           console.error("Simulation error:", data.message);
         }
@@ -469,8 +473,8 @@ function App() {
         }
 
 
-        // Step 2: Clear the video data
-        setVideoData(null);
+        // Step 2: Clear the simulation data
+        setSimData(null);
   
         // Step 2: Proceed with loading the JSON file
         const reader = new FileReader();
@@ -858,37 +862,9 @@ function App() {
             </div>
           )}
         </div>
-      {/* Video Player */}
-      {/* <div style={{ flex: 1 }}>
-        {videoUrl ? (
-          <video
-            controls
-            src={videoUrl}
-            style={{ width: "50%", border: "1px solid black" }}
-          />
-        ) : (
-          <p>No video available. Run a simulation.</p>
-        )}
-      </div> */}
       {/* Video Player Section */}
       <div style={{ marginLeft: "20px", border: `1px solid blue`,}}>
-        {videoData ? (
-          <VideoPlayer videoData={videoData} width={vid_res} height={vid_res} fps={fps} />
-        ) : (
-          <div
-            style={{
-              width: `${vid_res}`,
-              height: `${vid_res}`,
-              border: "1px solid black",
-              display: "flex",
-              // alignItems: "center",
-              // justifyContent: "center",
-              backgroundColor: "#f5f5f5",
-            }}
-          >
-            <p>No video available. Run a simulation first.</p>
-          </div>
-        )}
+        <VideoPlayer simData={simData} width={vid_res} height={vid_res} fps={fps} />
       </div>
     </div>
   );

@@ -21,8 +21,8 @@ import copy
 import json
 
 GLOBAL_SIM_DATA = None
-GLOBAL_RG_HIT = False
 
+# Define the path to the React build folder relative to this file
 build_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
 
 # Flask app initialization
@@ -163,51 +163,6 @@ def run_simulation_with_visualization(entities, simulationParams):
     sim_data['num_barriers'] = len(sim_data['barriers'])
     sim_data['num_occs'] = len(sim_data['occluders'])
 
-    # Initialize the 3D NumPy array for visualization
-    obs_array = np.zeros((frames, SPACE_SIZE_height, SPACE_SIZE_width, 3), dtype=np.uint8)
-
-    frame_data_template = np.ones((SPACE_SIZE_height, SPACE_SIZE_width, 3), dtype=np.uint8) * 255  # Add color channels
-    # add red, green, barriers then occs
-    for entity in entities:
-        if entity["type"] == "green_sensor":
-            width, height = entity["width"], entity["height"]
-            x, y = entity["x"], entity["y"]
-            mask = np.all(
-                np.array([
-                    x_vals >= x,
-                    y_vals >= y,
-                    x_vals < x + width,
-                    y_vals < y + height
-                ]), axis = 0
-            )
-            frame_data_template[mask] = [0, 255, 0]
-
-        elif entity["type"] == "red_sensor":
-            width, height = entity["width"], entity["height"]
-            x, y = entity["x"], entity["y"]
-            mask = np.all(
-                np.array([
-                    x_vals >= x,
-                    y_vals >= y,
-                    x_vals < x + width,
-                    y_vals < y + height
-                ]), axis = 0
-            )
-            frame_data_template[mask] = [255, 0, 0]
-
-        elif entity["type"] == "barrier":
-            width, height = entity["width"], entity["height"]
-            x, y = entity["x"], entity["y"]
-            mask = np.all(
-                np.array([
-                    x_vals >= x,
-                    y_vals >= y,
-                    x_vals < x + width,
-                    y_vals < y + height
-                ]), axis = 0
-            )
-            frame_data_template[mask] = [0, 0, 0]
-
     has_hit_red_green = False
 
     # Simulate for the given number of frames
@@ -216,7 +171,7 @@ def run_simulation_with_visualization(entities, simulationParams):
             for _ in range(FRAME_INTERVAL):
                 space.step(TIMESTEP)
 
-        frame_data = frame_data_template.copy()
+        # frame_data = frame_data_template.copy()
         # Draw the entities in the frame
         for entity in entities:
             if entity['id'] in list(body_map.keys()):
@@ -233,7 +188,6 @@ def run_simulation_with_visualization(entities, simulationParams):
                     # x = x_vals_discrete[np.argmin(np.abs(x_vals_discrete - body.position.x))]
                     # y = y_vals_discrete[np.argmin(np.abs(y_vals_discrete - body.position.y))]
                     target_mask = np.square(x_vals + interval/2 - (tx + r)) + np.square(y_vals + interval/2 - (ty + r)) <= np.square(r)
-                    frame_data[target_mask] = [0, 0, 255]
                     # save to metadata
                     sim_data['step_data'][frame] = { # overspecified
                         'x' : tx,
@@ -243,22 +197,6 @@ def run_simulation_with_visualization(entities, simulationParams):
                         'vx' : vx,
                         'vy' : vy
                     }
-        # Store the frame in the visualization data
-        for entity in entities:
-            if entity["type"] == "occluder":
-                width, height = entity["width"], entity["height"]
-                x, y = entity["x"], entity["y"]
-                mask = np.all(
-                    np.array([
-                        x_vals >= x,
-                        y_vals >= y,
-                        x_vals < x + width,
-                        y_vals < y + height
-                    ]), axis = 0
-                )
-                frame_data[mask] = [128, 128, 128]
-                
-        obs_array[frame] = frame_data
 
         # NOTE: NEED TO PROCESS THIS IN RED AND IN GREEN!!!!!
         if 'red_sensor' in sim_data and 'green_sensor' in sim_data:
@@ -281,13 +219,9 @@ def run_simulation_with_visualization(entities, simulationParams):
 
         if has_hit_red_green:
             break
-    # NOTE: setobs array to length of frames in case of early rtermination
-    obs_array = obs_array[:frame+1]
-    sim_data['num_frames'] = frame+1
-    sim_data['obs_array'] = obs_array
 
-    print(obs_array.shape)
-    return obs_array, sim_data
+    sim_data['num_frames'] = frame+1 # this cannot be frames, because ball may hit red or green before the 
+    return sim_data
 
 def get_high_res_obs_array(sim_data):
 
@@ -378,10 +312,6 @@ def get_high_res_obs_array(sim_data):
 
     return high_res_obs_array
 
-# LINK TO REACT JS
-
-# Define the path to the React build folder relative to this file
-
 @app.route("/")
 def index():
     """
@@ -419,15 +349,16 @@ def simulate():
         simulationParams = data.get("simulationParams", [])  # Default to 30 steps
         simulationParams = list(simulationParams.values())
         # Run the Pymunk simulation
-        viz_array, sim_data = run_simulation_with_visualization(entities, simulationParams)  # T x M x N x 3
+        # viz_array, sim_data = run_simulation_with_visualization(entities, simulationParams)  # T x M x N x 3
+        sim_data = run_simulation_with_visualization(entities, simulationParams)  # T x M x N x 3
         global GLOBAL_SIM_DATA
         GLOBAL_SIM_DATA = copy.deepcopy(sim_data)
 
         # Convert the NumPy array to a list for JSON serialization
-        viz_array_list = viz_array.tolist()
+        # viz_array_list = viz_array.tolist()
         print("physics done")
 
-        return jsonify({"status": "success", "viz_array": viz_array_list})
+        return jsonify({"status": "success", "sim_data": sim_data})
     except Exception as e:
         print("Error during simulation:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -489,17 +420,6 @@ def save_data():
         print("Error during saving:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-@app.route("/resolve_path", methods=["POST"])
-def resolve_path():
-    data = request.json
-    directory_name = data.get("directory_name")
-    if not directory_name:
-        return jsonify({"error": "No directory name provided"}), 400
-    
-    # Assuming directory_name is relative, resolve the full path
-    full_path = os.path.abspath(directory_name)
-    return jsonify({"full_path": full_path})
 
 @app.route('/clear_simulation', methods=['POST'])
 def clear_simulation():
