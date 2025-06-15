@@ -368,8 +368,7 @@ def save_data():
     data = request.json
     trial_name = data.get("trial_name", [])
     entities = data.get("entities", [])
-    # save_path = data.get("selectedDirectory", [])
-    save_path = "/Users/arijitdasgupta/Desktop/projects/mental_physics_trials/pilot_final"
+    save_path = data.get("selectedDirectory", [])
     override = data.get("override", [])
     print(f"save data activated for Trial: {trial_name}")
     try:
@@ -390,26 +389,6 @@ def save_data():
             raise ValueError("There is no SIMULATION data to save, press simulate")
         if GLOBAL_SIM_DATA['rg_outcome'] is None:
             raise ValueError("The simulation has not hit red or green, run for longer")
-        high_res_obs_array = get_high_res_obs_array(GLOBAL_SIM_DATA)
-        GLOBAL_SIM_DATA['high_res_obs_array'] = high_res_obs_array
-
-        low_res_anim = get_anim(GLOBAL_SIM_DATA['obs_array'])
-        low_res_path = os.path.join(trial_dir, 'low_res_obs.mp4')
-        np.savez_compressed(os.path.join(trial_dir, 'low_res_obs.npz'), GLOBAL_SIM_DATA['obs_array'])
-        low_res_anim.save(low_res_path, writer='ffmpeg', fps=GLOBAL_SIM_DATA['fps'])
-
-        T, M, N, _ = high_res_obs_array.shape
-        high_res_obs_array_border = np.zeros((T,M+4,N+4,3)).astype(np.uint8)
-        high_res_obs_array_border[:,2:M+2,2:N+2,:] = high_res_obs_array
-
-        high_res_anim = get_anim(high_res_obs_array_border)
-        high_res_path = os.path.join(trial_dir, 'high_res_obs.mp4')
-        np.savez_compressed(os.path.join(trial_dir, 'high_res_obs.npz'), GLOBAL_SIM_DATA['high_res_obs_array'])
-        high_res_anim.save(high_res_path, writer='ffmpeg', fps=GLOBAL_SIM_DATA['fps'])
-
-        data_path = os.path.join(trial_dir, 'data.npz')
-        filtered_data = {k: v for k, v in GLOBAL_SIM_DATA.items() if k not in ['obs_array', 'high_res_obs_array']}
-        np.savez_compressed(data_path, **filtered_data) # to save data
 
         entities_path = os.path.join(trial_dir, 'init_state_entities.json')
         save_to_json(entities, entities_path)

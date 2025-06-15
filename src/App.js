@@ -646,15 +646,19 @@ function App() {
     }
   };
 
-  
+   
   const handleSavedata = async () => {
     try {
+      // Show file manager to let user select directory
+      const directoryHandle = await window.showDirectoryPicker();
+      const selectedDirectory = directoryHandle.name;
+
       const response = await fetch("/save_data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           trial_name,
-          // selectedDirectory,
+          selectedDirectory,
           entities,
           override: false, // Add the override flag
         }),
@@ -677,7 +681,7 @@ function App() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               trial_name,
-              // selectedDirectory,
+              selectedDirectory,
               entities,
               override: true, // Add the override flag
             }),
@@ -700,8 +704,13 @@ function App() {
         alert("Error saving data: " + data.message);
       }
     } catch (error) {
-      console.error("Fetch error:", error);
-      alert("An unexpected error occurred while saving data.");
+      if (error.name === 'AbortError') {
+        // User cancelled the directory picker
+        alert("Directory selection was cancelled.");
+      } else {
+        console.error("Fetch error:", error);
+        alert("An unexpected error occurred while saving data.");
+      }
     }
   };
   
