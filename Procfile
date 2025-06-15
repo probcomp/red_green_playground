@@ -1,1 +1,1 @@
-web: node create_stimuli/src/index.js
+web: node src/index.js

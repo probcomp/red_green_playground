@@ -377,8 +377,8 @@ def get_high_res_obs_array(sim_data):
 
 # LINK TO REACT JS
 
-# Define the absolute path to the React build folder
-build_path = "/home/arijitdasgupta/Mental_Physics_2D/interactive/create_stimuli/build"
+# Define the path to the React build folder relative to this file
+build_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
 
 # Flask app initialization
 app = Flask(__name__, static_folder=os.path.join(build_path, "static"))

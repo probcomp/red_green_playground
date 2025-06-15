@@ -55,17 +55,12 @@ npm --version
 
 ### 4. Set Up and Run the Frontend
 
-1. Navigate to the frontend directory:
-```bash
-cd create_stimuli
-```
-
-2. Install dependencies:
+1. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Start the development server:
+2. Start the development server:
 ```bash
 npm start
 ```
