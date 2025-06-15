@@ -1,1 +1,1 @@
-web: npm start & python create_stimuli.py
+web: python create_stimuli.py & npm start
