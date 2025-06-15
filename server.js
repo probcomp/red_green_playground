@@ -10,7 +10,11 @@ app.get('/*', function(req, res) {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+const port = process.env.PORT || 5001;
+app.listen(port, '0.0.0.0', (err) => {
+  if (err) {
+    console.error('Error starting server:', err);
+    process.exit(1);
+  }
   console.log(`Server is running on port ${port}`);
 }); 

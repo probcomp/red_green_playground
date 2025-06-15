@@ -6,8 +6,6 @@ import os
 import pymunk
 from flask import Flask, request, jsonify
 
-app = Flask(__name__)
-
 import numpy as np
 import pymunk
 from tqdm import tqdm
@@ -24,6 +22,11 @@ import json
 
 GLOBAL_SIM_DATA = None
 GLOBAL_RG_HIT = False
+
+build_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
+
+# Flask app initialization
+app = Flask(__name__, static_folder=os.path.join(build_path, "static"))
 
 def get_anim(frames, framerate=30, skip_t = 1):
     """
@@ -378,10 +381,6 @@ def get_high_res_obs_array(sim_data):
 # LINK TO REACT JS
 
 # Define the path to the React build folder relative to this file
-build_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
-
-# Flask app initialization
-app = Flask(__name__, static_folder=os.path.join(build_path, "static"))
 
 @app.route("/")
 def index():
@@ -510,6 +509,6 @@ def clear_simulation():
     print("Simulation cleared successfully.")
     return jsonify({"status": "success", "message": "Simulation cleared."})
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port)
