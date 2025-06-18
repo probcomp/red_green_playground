@@ -1,10 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Rnd } from "react-rnd";
 import VideoPlayer from "./components/VideoPlayer";
-
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
-const ffmpeg = createFFmpeg({ log: true });
-let ffmpegLoaded = false;
 
 const vid_res = 400; 
 
@@ -12,19 +8,29 @@ function App() {
   const [entities, setEntities] = useState([]);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, entityId: null });
   const [targetDirection, setTargetDirection] = useState(0); // Angle in radians
-  const [targetSpeed, setTargetSpeed] = useState(0); // Speed in intervals of 0.1
   const [simData, setSimData] = useState(null); // State to hold the simulation data
+  const videoPlayerRef = useRef(null); // Ref for VideoPlayer component
 
   // Simulation parameters
-  const [numFrames, setNumFrames] = useState(300);
-  const [timestepsPerFrame, setTimestepsPerFrame] = useState(6);
-  const [timestep, setTimestep] = useState(0.02);
-  const [fps, setFps] = useState(20); // Default FPS
-  const [res_multiplier, setRes_multiplier] = useState(1); // Default res multiplier
+  const [videoLength, setVideoLength] = useState(10); // Video length in seconds
+  const [ballSpeed, setBallSpeed] = useState(3.6); // Ball speed in diameter/s
+  const [fps, setFps] = useState(30); // FPS
+  const res_multiplier = 4;
+  // Calculate physics steps per frame to keep timestep close to 0.01
+  // while ensuring ball speed = fps * physicsStepsPerFrame * timestep
+  const targetTimestep = 0.01;
+  const idealPhysicsStepsPerFrame = (ballSpeed / fps) / targetTimestep;
+  const physicsStepsPerFrame = Math.max(1, Math.round(idealPhysicsStepsPerFrame));
+  
+  // Calculate actual timestep to achieve exact ball speed
+  const timestep = (ballSpeed / fps) / physicsStepsPerFrame;
+  // Validate physics parameters
+  const isValidPhysics = physicsStepsPerFrame <= 50; // Reasonable upper limit
+  const physicsWarning = physicsStepsPerFrame > 20 ? "High physics steps - consider reducing ball speed or increasing FPS" : null;
 
   // Saving and Loading params
   const [trial_name, setTrial_name] = useState('base'); // Default res multiplier
-  const [saveDirectory, setSaveDirectory] = useState(null); // State to store the selected save directory
+  const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null); // State to store the actual directory handle
   const [autoDownloadMP4, setAutoDownloadMP4] = useState(false); // State for MP4 download toggle
 
   const worldHeight = 20;
@@ -57,7 +63,6 @@ function App() {
       width: entityWidth,
       height: entityHeight,
       direction: 0, // Initial direction in radians
-      speed: 1, // Initial speed (1 unit)
     };
     setEntities([...entities, newEntity]);
   };
@@ -65,72 +70,13 @@ function App() {
   const updateEntity = (id, updatedEntity) => {
     setEntities(entities.map((e) => (e.id === id ? updatedEntity : e)));
   };
-
-  
-  const rotateEntityPosition = (entity, rotationAngle) => {
-    const centerX = worldWidth / 2; // The center of the scene (X coordinate)
-    const centerY = worldHeight / 2; // The center of the scene (Y coordinate)
-
-
-    const entity_x = entity.x + entity.width/2;
-    const entity_y = entity.y + entity.height/2;
-    const new_width = entity.height;
-    const new_height = entity.width;
-    
-    const translatedX = entity_x - centerX;
-    const translatedY = entity_y - centerY;
-    
-    const rotatedX =  translatedY;
-    const rotatedY = -translatedX;
-    
-    // Translate back to the original position
-    const newX = rotatedX + centerX - new_width/2;
-    const newY = rotatedY + centerY - new_height/2;
-    
-    return {
-      ...entity,
-      x: newX,
-      y: newY,
-      width: new_width,
-      height: new_height
-    };
-  };
   
 
-  const rotateEntityDirection = (entity, rotationAngle) => {
-    console.log("prev: ", entity.direction);
-    const newDirection = ((entity.direction - Math.PI / 2 + Math.PI) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI) - Math.PI;
-    updateTargetDirectionAndSpeed(newDirection * (180/Math.PI), entity.speed);
-    console.log("next", newDirection);
-    return { ...entity, direction: newDirection };
-  };
-  
-  
-  const rotateScene = () => {
-    // Update entity positions and directions based on 90° rotation
-    setEntities((prevEntities) =>
-      prevEntities.map((entity) => {
-        if (entity.type === "target") {
-          const rotatedEntity = rotateEntityPosition(entity, 90);
-          return rotateEntityDirection(rotatedEntity, 90);
-        } else {
-          return rotateEntityPosition(entity, 90);
-        }
-      })
-    );
-  };
-  
-
-  const updateTargetDirectionAndSpeed = (angleDegrees, speed) => {
-    // const snappedAngle = Math.round(angleDegrees); // Snap angle to the nearest degree
+  const updateTargetDirectionAndSpeed = (angleDegrees) => {
     const snappedAngle = angleDegrees; // Snap angle to the nearest degree
-    const snappedSpeed = Math.round(speed / interval) * interval; // Snap speed to the nearest interval
   
     if (snappedAngle >= -180 && snappedAngle < 180) {
       setTargetDirection((snappedAngle * Math.PI) / 180); // Convert degrees to radians
-    }
-    if (snappedSpeed >= 0) {
-      setTargetSpeed(snappedSpeed);
     }
   };
 
@@ -142,7 +88,7 @@ function App() {
     const centerY = (worldHeight - (target.y + target.height / 2)) * px_scale + border_px;
   
     // Calculate the arrow endpoint
-    const arrowLength = targetSpeed * px_scale;
+    const arrowLength = ballSpeed * px_scale;
     console.log("targetDirection: ", targetDirection);
     const arrowEndX = centerX + arrowLength * Math.cos(targetDirection);
     const arrowEndY = centerY - arrowLength * Math.sin(targetDirection);
@@ -154,18 +100,14 @@ function App() {
       // Calculate the precise angle in radians
       const preciseAngle = Math.atan2(deltaY, deltaX); 
     
-      // Always set the speed to 1.0
-      const fixedSpeed = 1.0;
-    
-      updateTargetDirectionAndSpeed(preciseAngle * (180 / Math.PI), fixedSpeed);
+      updateTargetDirectionAndSpeed(preciseAngle * (180 / Math.PI));
 
       console.log("preciseAngle: ", preciseAngle);
     
-      // Update the entity's direction and speed
+      // Update the entity's direction
       const updatedEntity = {
         ...target,
         direction: preciseAngle, // Use the precise angle in radians
-        speed: fixedSpeed, // Always use the fixed speed
       };
       updateEntity(target.id, updatedEntity);
     };
@@ -228,11 +170,12 @@ function App() {
       body: JSON.stringify({
         entities,
         simulationParams: {
-          numFrames,
-          timestepsPerFrame,
-          timestep,
+          videoLength,
+          ballSpeed,
+          fps,
+          physicsStepsPerFrame,
           res_multiplier,
-          fps
+          timestep
         },
       }),
     })
@@ -281,7 +224,6 @@ function App() {
               const targetEntity = parsedEntities.find((entity) => entity.type === "target");
               if (targetEntity) {
                 setTargetDirection(targetEntity.direction || 0);
-                setTargetSpeed(targetEntity.speed || 0);
               }
             } else {
               alert("Invalid file format. Ensure the JSON contains an array of entities.");
@@ -299,9 +241,15 @@ function App() {
   };
 
   const handleSetSaveDirectory = async () => {
+    // Check if File System Access API is supported
+    if (!('showDirectoryPicker' in window)) {
+      alert("File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.");
+      return;
+    }
+
     try {
       const directoryHandle = await window.showDirectoryPicker();
-      setSaveDirectory(directoryHandle.name);
+      setSaveDirectoryHandle(directoryHandle);
       alert(`Save directory set to: ${directoryHandle.name}`);
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -315,83 +263,91 @@ function App() {
   };
 
   const handleSavedata = async () => {
-    if (!saveDirectory) {
+    if (!saveDirectoryHandle) {
       alert("Please set a save directory first!");
       return;
     }
 
+    if (!simData) {
+      alert("No simulation data available. Please run a simulation first!");
+      return;
+    }
+
     try {
-      const response = await fetch("/save_data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          trial_name,
-          selectedDirectory: saveDirectory,
-          entities,
-          override: false,
-        }),
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok && data.status === "success") {
-        alert("Data saved successfully!");
-        
-        // If auto download is enabled and we have simulation data, download the MP4
-        if (autoDownloadMP4 && simData) {
-          const videoPlayerRef = document.querySelector('canvas');
-          if (videoPlayerRef) {
-            const videoPlayer = videoPlayerRef.__reactFiber$;
-            if (videoPlayer && videoPlayer.downloadMP4) {
-              videoPlayer.downloadMP4();
-            }
-          }
-        }
-      } else if (data.status === "override_dir") {
-        const userConfirm = window.confirm(
-          "The directory already exists. Do you want to replace it?"
+      // Check if trial directory already exists
+      let trialDirExists = false;
+      try {
+        await saveDirectoryHandle.getDirectoryHandle(trial_name);
+        trialDirExists = true;
+      } catch (error) {
+        // Directory doesn't exist, which is fine
+        trialDirExists = false;
+      }
+
+      // If directory exists, ask user for confirmation
+      if (trialDirExists) {
+        const userConfirmed = window.confirm(
+          `The trial directory "${trial_name}" already exists in the save directory. Do you want to override it?`
         );
-        if (userConfirm) {
-          const overrideResponse = await fetch("/save_data", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              trial_name,
-              selectedDirectory: saveDirectory,
-              entities,
-              override: true,
-            }),
-          });
-  
-          const overrideData = await overrideResponse.json();
-  
-          if (overrideResponse.ok && overrideData.status === "success") {
-            alert("Data saved successfully with override!");
-            
-            // If auto download is enabled and we have simulation data, download the MP4
-            if (autoDownloadMP4 && simData) {
-              const videoPlayerRef = document.querySelector('canvas');
-              if (videoPlayerRef) {
-                const videoPlayer = videoPlayerRef.__reactFiber$;
-                if (videoPlayer && videoPlayer.downloadMP4) {
-                  videoPlayer.downloadMP4();
-                }
-              }
-            }
-          } else {
-            console.error("Error:", overrideData.message);
-            alert("Error overriding data: " + overrideData.message);
-          }
-        } else {
-          alert("Operation canceled. Data was not saved.");
+        if (!userConfirmed) {
+          return; // User chose not to override
         }
-      } else {
-        console.error("Error:", data.message);
-        alert("Error saving data: " + data.message);
+      }
+
+      // Create trial directory
+      const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
+      
+      // Save entities JSON file
+      const entitiesFileHandle = await trialDirHandle.getFileHandle('init_state_entities.json', { create: true });
+      const entitiesWritable = await entitiesFileHandle.createWritable();
+      await entitiesWritable.write(JSON.stringify(entities, null, 2));
+      await entitiesWritable.close();
+      
+      // Save simulation data JSON file
+      const simDataFileHandle = await trialDirHandle.getFileHandle('simulation_data.json', { create: true });
+      const simDataWritable = await simDataFileHandle.createWritable();
+      await simDataWritable.write(JSON.stringify(simData, null, 2));
+      await simDataWritable.close();
+      
+      alert("Data saved successfully!");
+      
+      // If auto download is enabled and we have simulation data, download the MP4
+      if (autoDownloadMP4 && simData && videoPlayerRef.current) {
+        videoPlayerRef.current.downloadMP4();
       }
     } catch (error) {
-      console.error("Fetch error:", error);
-      alert("An unexpected error occurred while saving data.");
+      console.error("Error saving data:", error);
+      
+      // Fallback: download files if File System Access API fails
+      if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+        alert("Permission denied. Falling back to download files.");
+        
+        // Download entities JSON
+        const entitiesBlob = new Blob([JSON.stringify(entities, null, 2)], { type: 'application/json' });
+        const entitiesUrl = URL.createObjectURL(entitiesBlob);
+        const entitiesLink = document.createElement('a');
+        entitiesLink.href = entitiesUrl;
+        entitiesLink.download = `${trial_name}_init_state_entities.json`;
+        document.body.appendChild(entitiesLink);
+        entitiesLink.click();
+        document.body.removeChild(entitiesLink);
+        URL.revokeObjectURL(entitiesUrl);
+        
+        // Download simulation data JSON
+        const simDataBlob = new Blob([JSON.stringify(simData, null, 2)], { type: 'application/json' });
+        const simDataUrl = URL.createObjectURL(simDataBlob);
+        const simDataLink = document.createElement('a');
+        simDataLink.href = simDataUrl;
+        simDataLink.download = `${trial_name}_simulation_data.json`;
+        document.body.appendChild(simDataLink);
+        simDataLink.click();
+        document.body.removeChild(simDataLink);
+        URL.revokeObjectURL(simDataUrl);
+        
+        alert("Files downloaded successfully!");
+      } else {
+        alert("An error occurred while saving data: " + error.message);
+      }
     }
   };
   
@@ -409,34 +365,22 @@ function App() {
         {/* Input Fields */}
         <div>
           <label>
-            Number of Frames:
+            Video Length (seconds):
             <input
               type="number"
-              value={numFrames}
-              onChange={(e) => setNumFrames(Number(e.target.value))}
+              value={videoLength}
+              onChange={(e) => setVideoLength(Number(e.target.value))}
               className="ml-2 px-2 py-1 border rounded w-full"
             />
           </label>
         </div>
         <div>
           <label>
-            Timesteps per Frame:
+            Ball Speed (diameter/s):
             <input
               type="number"
-              value={timestepsPerFrame}
-              onChange={(e) => setTimestepsPerFrame(Number(e.target.value))}
-              className="ml-2 px-2 py-1 border rounded w-full"
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Timestep:
-            <input
-              type="number"
-              value={timestep}
-              step="0.01"
-              onChange={(e) => setTimestep(Number(e.target.value))}
+              value={ballSpeed}
+              onChange={(e) => setBallSpeed(Number(e.target.value))}
               className="ml-2 px-2 py-1 border rounded w-full"
             />
           </label>
@@ -452,16 +396,13 @@ function App() {
             />
           </label>
         </div>
-        <div>
-          <label>
-            Resolution Multiplier:
-            <input
-              type="number"
-              value={res_multiplier}
-              onChange={(e) => setRes_multiplier(Number(e.target.value))}
-              className="ml-2 px-2 py-1 border rounded w-full"
-            />
-          </label>
+        <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+          Ball moves {(ballSpeed / fps).toFixed(3)} diameters per frame
+          {physicsWarning && (
+            <div style={{ color: '#ff6b35', marginTop: '2px' }}>
+              ⚠️ {physicsWarning}
+            </div>
+          )}
         </div>
 
         {/* Entity Buttons */}
@@ -497,30 +438,21 @@ function App() {
             Add Target
           </button>
         </div>
-        <button
-          onClick={rotateScene}
-          style={{
-            backgroundColor: "purple",
-            color: "white",
-            padding: "12px",
-            borderRadius: "4px",
-          }}
-        >
-          Rotate Scene 90° Clockwise
-        </button>
 
         {/* Action Buttons */}
         <button
           onClick={handleSimulate}
+          disabled={!isValidPhysics}
           style={{
-            backgroundColor: "orange",
+            backgroundColor: isValidPhysics ? "orange" : "#ccc",
             color: "white",
             padding: "12px",
             borderRadius: "4px",
             marginTop: "10px",
+            cursor: isValidPhysics ? "pointer" : "not-allowed",
           }}
         >
-          Simulate
+          {isValidPhysics ? "Simulate" : "Invalid Physics Parameters"}
         </button>
 
         <div>
@@ -545,7 +477,7 @@ function App() {
             marginBottom: "10px",
           }}
         >
-          Set Save Directory
+          Select Save Directory
         </button>
 
         <div style={{ marginBottom: "10px" }}>
@@ -610,8 +542,6 @@ function App() {
           height: `${worldHeight * px_scale}px`, // Fixed height for the canvas
           border: `${border_px}px solid black`,
           overflow: "hidden", // Ensures content doesn't overflow the fixed dimensions
-          // transform: `rotate(${rotation}deg)`, // Apply the rotation here
-          // transformOrigin: "center", // Ensure rotation is centered
         }}
         onClick={() => setContextMenu({ visible: false, x: 0, y: 0, entityId: null })}
         onContextMenu={(e) => e.preventDefault()} // Prevent default browser context menu
@@ -726,6 +656,8 @@ function App() {
             height={vid_res} 
             fps={fps} 
             trial_name={trial_name}
+            saveDirectoryHandle={saveDirectoryHandle}
+            ref={videoPlayerRef}
           />
         ) : (
           <div

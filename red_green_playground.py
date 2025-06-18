@@ -64,7 +64,15 @@ def save_to_json(data, filename="data.json"):
         print(f"An error occurred while saving to JSON: {e}")
 # Convert entities to Pymunk bodies and run simulation
 def run_simulation_with_visualization(entities, simulationParams):
-    frames, FRAME_INTERVAL, TIMESTEP, res_multiplier, FPS = simulationParams
+    videoLength, ballSpeed, fps, physicsStepsPerFrame, res_multiplier, timestep = simulationParams
+
+    # Calculate derived values
+    numFrames = int(videoLength * fps)
+    FRAME_INTERVAL = physicsStepsPerFrame
+    TIMESTEP = timestep
+    print(f"TIMESTEP: {TIMESTEP}")
+    print(f"FRAME_INTERVAL: {FRAME_INTERVAL}")
+    FPS = fps
 
     sim_data = {'barriers': [], 'occluders' : [], 'step_data' : {}, 'rg_hit_timestep' : -1, 'rg_outcome': None}
 
@@ -81,7 +89,7 @@ def run_simulation_with_visualization(entities, simulationParams):
     sim_data['elasticity'] = elasticity
     sim_data['timestep'] = TIMESTEP
     sim_data['timesteps_per_frame'] = FRAME_INTERVAL
-    sim_data['num_frames'] = frames+1
+    sim_data['num_frames'] = numFrames
     sim_data['fps'] = FPS
     SPACE_SIZE_width = worldWidth * int(1/interval)
     SPACE_SIZE_height = worldHeight * int(1/interval)
@@ -117,8 +125,10 @@ def run_simulation_with_visualization(entities, simulationParams):
         x, y, width, height = entity["x"], entity["y"], entity["width"], entity["height"]
         if entity["type"] == "target":
             valid_physics_entity = True
-            speed, direction = entity['speed'], entity['direction']
-            vx, vy = speed * np.cos(direction), speed * np.sin(direction)
+            direction = entity['direction']
+            # The ball speed is controlled by physics parameters (timestep and physicsStepsPerFrame)
+            # not by the initial velocity magnitude
+            vx, vy = np.cos(direction), np.sin(direction)
             # Circle for the target
             radius = width / 2
             mass = 1.0  # Assign a reasonable mass
@@ -166,7 +176,7 @@ def run_simulation_with_visualization(entities, simulationParams):
     has_hit_red_green = False
 
     # Simulate for the given number of frames
-    for frame in tqdm(range(frames)):
+    for frame in tqdm(range(numFrames)):
         if frame != 0:
             for _ in range(FRAME_INTERVAL):
                 space.step(TIMESTEP)
@@ -369,43 +379,6 @@ def simulate():
     except Exception as e:
         print("Error during simulation:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route("/save_data", methods=["POST"])
-def save_data():
-    data = request.json
-    trial_name = data.get("trial_name", [])
-    entities = data.get("entities", [])
-    save_path = data.get("selectedDirectory", [])
-    override = data.get("override", [])
-    print(f"save data activated for Trial: {trial_name}")
-    try:
-        print("saving data")
-
-        trial_dir = os.path.join(save_path, trial_name)
-        trial_exists = os.path.exists(trial_dir)
-
-        if (not trial_exists) or (trial_exists and override):
-            # Create the directory (including intermediate directories if needed)
-            os.makedirs(trial_dir, exist_ok = True)
-            print(f"Directory created: {trial_dir}")
-        else:
-            return jsonify({"status": "override_dir"})
-
-        global GLOBAL_SIM_DATA
-        if GLOBAL_SIM_DATA is None:
-            raise ValueError("There is no SIMULATION data to save, press simulate")
-        if GLOBAL_SIM_DATA['rg_outcome'] is None:
-            raise ValueError("The simulation has not hit red or green, run for longer")
-
-        entities_path = os.path.join(trial_dir, 'init_state_entities.json')
-        save_to_json(entities, entities_path)
-        print("data saved")
-
-        return jsonify({"status": "success"})
-    except Exception as e:
-        print("Error during saving:", e)
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 
 @app.route('/clear_simulation', methods=['POST'])
 def clear_simulation():

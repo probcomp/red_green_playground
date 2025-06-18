@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
-const vid_res = 400;
-
-const VideoPlayer = ({ simData, width = vid_res, height = vid_res, fps, trial_name }) => {
+const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveDirectoryHandle }, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -21,11 +19,9 @@ const VideoPlayer = ({ simData, width = vid_res, height = vid_res, fps, trial_na
   const canvasHeight = Math.floor(worldHeight / interval);
 
   // Expose downloadMP4 function to parent component
-  useEffect(() => {
-    if (canvasRef.current) {
-      canvasRef.current.downloadMP4 = downloadMP4;
-    }
-  }, [simData, trial_name]);
+  useImperativeHandle(ref, () => ({
+    downloadMP4: downloadMP4
+  }), [simData, trial_name, fps, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, saveDirectoryHandle]);
 
   useEffect(() => {
     if (!simData) return;
@@ -199,14 +195,39 @@ const VideoPlayer = ({ simData, width = vid_res, height = vid_res, fps, trial_na
       const mp4Data = ffmpeg.FS('readFile', outputName);
   
       const mp4Blob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
-      const url = URL.createObjectURL(mp4Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${trial_name}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      
+      // If saveDirectoryHandle is available, save to the selected directory
+      if (saveDirectoryHandle) {
+        try {
+          const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
+          const videoFileHandle = await trialDirHandle.getFileHandle(`${trial_name}.mp4`, { create: true });
+          const videoWritable = await videoFileHandle.createWritable();
+          await videoWritable.write(mp4Blob);
+          await videoWritable.close();
+          console.log(`Video saved to ${trial_name}/${trial_name}.mp4`);
+        } catch (error) {
+          console.error("Error saving video to directory:", error);
+          // Fallback to download if directory save fails
+          const url = URL.createObjectURL(mp4Blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${trial_name}.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      } else {
+        // Fallback to download if no directory is selected
+        const url = URL.createObjectURL(mp4Blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${trial_name}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     };  
 
     // Start recording
@@ -366,6 +387,6 @@ const VideoPlayer = ({ simData, width = vid_res, height = vid_res, fps, trial_na
       </div>
     </div>
   );
-};
+});
 
 export default VideoPlayer; 
