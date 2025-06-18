@@ -199,10 +199,17 @@ def run_simulation_with_visualization(entities, simulationParams):
                     }
 
         # NOTE: NEED TO PROCESS THIS IN RED AND IN GREEN!!!!!
-        if 'red_sensor' in sim_data and 'green_sensor' in sim_data:
-            size = sim_data['target']['size']
-            in_red = tx + size >= sim_data['red_sensor']['x'] and tx <= sim_data['red_sensor']['x'] + sim_data['red_sensor']['width'] and ty + size >= sim_data['red_sensor']['y'] and ty <= sim_data['red_sensor']['y'] + sim_data['red_sensor']['height']
-            in_green = tx + size >= sim_data['green_sensor']['x'] and tx <= sim_data['green_sensor']['x'] + sim_data['green_sensor']['width'] and ty + size >= sim_data['green_sensor']['y'] and ty <= sim_data['green_sensor']['y'] + sim_data['green_sensor']['height']
+        if 'red_sensor' in sim_data or 'green_sensor' in sim_data:
+            if 'red_sensor' in sim_data:
+                size = sim_data['target']['size']
+                in_red = tx + size >= sim_data['red_sensor']['x'] and tx <= sim_data['red_sensor']['x'] + sim_data['red_sensor']['width'] and ty + size >= sim_data['red_sensor']['y'] and ty <= sim_data['red_sensor']['y'] + sim_data['red_sensor']['height']
+            else:
+                in_red = False
+            if 'green_sensor' in sim_data:
+                size = sim_data['target']['size']
+                in_green = tx + size >= sim_data['green_sensor']['x'] and tx <= sim_data['green_sensor']['x'] + sim_data['green_sensor']['width'] and ty + size >= sim_data['green_sensor']['y'] and ty <= sim_data['green_sensor']['y'] + sim_data['green_sensor']['height']
+            else:
+                in_green = False
         else:
             in_red = False
             in_green = False
