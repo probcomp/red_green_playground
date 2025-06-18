@@ -64,7 +64,7 @@ def save_to_json(data, filename="data.json"):
         print(f"An error occurred while saving to JSON: {e}")
 # Convert entities to Pymunk bodies and run simulation
 def run_simulation_with_visualization(entities, simulationParams):
-    videoLength, ballSpeed, fps, physicsStepsPerFrame, res_multiplier, timestep = simulationParams
+    videoLength, ballSpeed, fps, physicsStepsPerFrame, res_multiplier, timestep, worldWidth, worldHeight = simulationParams
 
     # Calculate derived values
     numFrames = int(videoLength * fps)
@@ -79,8 +79,6 @@ def run_simulation_with_visualization(entities, simulationParams):
     # Pymunk simulation constants
     GRAVITY = (0, 0)  # Example gravity vector
     interval = 0.1/res_multiplier  # Pixels in the 2D visualization space
-    worldWidth = 20
-    worldHeight = 20
     friction = 0.0
     elasticity = 1.0
     sim_data['scene_dims'] = (worldWidth, worldHeight)

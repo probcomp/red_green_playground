@@ -8,6 +8,7 @@ function App() {
   const [entities, setEntities] = useState([]);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, entityId: null });
   const [targetDirection, setTargetDirection] = useState(0); // Angle in radians
+  const [directionInput, setDirectionInput] = useState("0"); // Direction input as string
   const [simData, setSimData] = useState(null); // State to hold the simulation data
   const videoPlayerRef = useRef(null); // Ref for VideoPlayer component
 
@@ -15,6 +16,8 @@ function App() {
   const [videoLength, setVideoLength] = useState(10); // Video length in seconds
   const [ballSpeed, setBallSpeed] = useState(3.6); // Ball speed in diameter/s
   const [fps, setFps] = useState(30); // FPS
+  const [worldWidth, setWorldWidth] = useState(20); // Scene width
+  const [worldHeight, setWorldHeight] = useState(20); // Scene height
   const res_multiplier = 4;
   // Calculate physics steps per frame to keep timestep close to 0.01
   // while ensuring ball speed = fps * physicsStepsPerFrame * timestep
@@ -33,8 +36,6 @@ function App() {
   const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null); // State to store the actual directory handle
   const [autoDownloadMP4, setAutoDownloadMP4] = useState(false); // State for MP4 download toggle
 
-  const worldHeight = 20;
-  const worldWidth = 20;
   const px_scale = 25;
   const interval = 0.1;
   const border_px = 2;
@@ -65,6 +66,12 @@ function App() {
       direction: 0, // Initial direction in radians
     };
     setEntities([...entities, newEntity]);
+    
+    // Initialize direction input if adding a target
+    if (type === "target") {
+      setDirectionInput("0");
+      setTargetDirection(0);
+    }
   };
 
   const updateEntity = (id, updatedEntity) => {
@@ -76,7 +83,28 @@ function App() {
     const snappedAngle = angleDegrees; // Snap angle to the nearest degree
   
     if (snappedAngle >= -180 && snappedAngle < 180) {
-      setTargetDirection((snappedAngle * Math.PI) / 180); // Convert degrees to radians
+      const newDirection = (snappedAngle * Math.PI) / 180; // Convert degrees to radians
+      setTargetDirection(newDirection);
+      setDirectionInput(snappedAngle.toString()); // Update the input field
+    }
+  };
+
+  const handleDirectionInputChange = (value) => {
+    setDirectionInput(value);
+    const angleDegrees = parseFloat(value);
+    if (!isNaN(angleDegrees) && angleDegrees >= -180 && angleDegrees < 180) {
+      const newDirection = (angleDegrees * Math.PI) / 180; // Convert degrees to radians
+      setTargetDirection(newDirection);
+      
+      // Update the target entity's direction
+      const targetEntity = entities.find(e => e.type === "target");
+      if (targetEntity) {
+        const updatedEntity = {
+          ...targetEntity,
+          direction: newDirection,
+        };
+        updateEntity(targetEntity.id, updatedEntity);
+      }
     }
   };
 
@@ -131,8 +159,8 @@ function App() {
         <Rnd
           size={{ width: 10, height: 10 }}
           position={{
-            x: arrowEndX - 0,
-            y: arrowEndY - 0,
+            x: arrowEndX - 5,
+            y: arrowEndY - 5,
           }}
           bounds="parent"
           onDragStop={handleArrowDragStop}
@@ -175,7 +203,9 @@ function App() {
           fps,
           physicsStepsPerFrame,
           res_multiplier,
-          timestep
+          timestep,
+          worldWidth,
+          worldHeight
         },
       }),
     })
@@ -224,6 +254,7 @@ function App() {
               const targetEntity = parsedEntities.find((entity) => entity.type === "target");
               if (targetEntity) {
                 setTargetDirection(targetEntity.direction || 0);
+                setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
               }
             } else {
               alert("Invalid file format. Ensure the JSON contains an array of entities.");
@@ -352,328 +383,916 @@ function App() {
   };
   
   return (
-    <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "20px" }}>
-      {/* Controls Section */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
+    <div style={{ 
+      display: "flex", 
+      flexDirection: "column", 
+      height: "100vh",
+      overflow: "hidden",
+      backgroundColor: "#f8fafc",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    }}>
+      {/* Middle Section - Canvas and Video Player */}
+      <div style={{ 
+        flex: 1, 
+        display: "flex", 
+        flexDirection: "row", 
+        alignItems: "flex-start", 
+        gap: "24px",
+        padding: "24px",
+        overflow: "auto"
+      }}>
+        {/* Left Side - Simulation Settings */}
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "20px",
           maxWidth: "300px",
-        }}
-      >
-        {/* Input Fields */}
-        <div>
-          <label>
-            Video Length (seconds):
-            <input
-              type="number"
-              value={videoLength}
-              onChange={(e) => setVideoLength(Number(e.target.value))}
-              className="ml-2 px-2 py-1 border rounded w-full"
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Ball Speed (diameter/s):
-            <input
-              type="number"
-              value={ballSpeed}
-              onChange={(e) => setBallSpeed(Number(e.target.value))}
-              className="ml-2 px-2 py-1 border rounded w-full"
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            FPS:
-            <input
-              type="number"
-              value={fps}
-              onChange={(e) => setFps(Number(e.target.value))}
-              className="ml-2 px-2 py-1 border rounded w-full"
-            />
-          </label>
-        </div>
-        <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-          Ball moves {(ballSpeed / fps).toFixed(3)} diameters per frame
-          {physicsWarning && (
-            <div style={{ color: '#ff6b35', marginTop: '2px' }}>
-              ⚠️ {physicsWarning}
+          flexShrink: 0
+        }}>
+          <div style={{ 
+            background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)", 
+            padding: '24px', 
+            borderRadius: '12px', 
+            border: '1px solid #e2e8f0',
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+          }}>
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              fontSize: '18px', 
+              fontWeight: '700', 
+              color: '#1e293b',
+              letterSpacing: '-0.025em'
+            }}>
+              Simulation Settings
+            </h3>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '8px',
+                letterSpacing: '0.025em'
+              }}>
+                Video Length (seconds)
+              </label>
+              <input
+                type="number"
+                value={videoLength}
+                onChange={(e) => setVideoLength(Number(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
             </div>
-          )}
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '8px',
+                letterSpacing: '0.025em'
+              }}>
+                Ball Speed (diameter/s)
+              </label>
+              <input
+                type="number"
+                value={ballSpeed}
+                onChange={(e) => setBallSpeed(Number(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '8px',
+                letterSpacing: '0.025em'
+              }}>
+                FPS
+              </label>
+              <input
+                type="number"
+                value={fps}
+                onChange={(e) => setFps(Number(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '8px',
+                letterSpacing: '0.025em'
+              }}>
+                Ball Direction (degrees)
+              </label>
+              <input
+                type="number"
+                value={directionInput}
+                onChange={(e) => handleDirectionInputChange(e.target.value)}
+                min="-180"
+                max="179.9"
+                step="0.1"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '8px',
+                letterSpacing: '0.025em'
+              }}>
+                Scene Dimensions
+              </label>
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                alignItems: 'center'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '500', 
+                    color: '#6b7280', 
+                    marginBottom: '4px'
+                  }}>
+                    Width
+                  </label>
+                  <input
+                    type="number"
+                    value={worldWidth}
+                    onChange={(e) => setWorldWidth(Number(e.target.value))}
+                    min="5"
+                    max="50"
+                    step="1"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'textfield',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#9ca3af', 
+                  fontWeight: '600',
+                  marginTop: '20px'
+                }}>
+                  ×
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '500', 
+                    color: '#6b7280', 
+                    marginBottom: '4px'
+                  }}>
+                    Height
+                  </label>
+                  <input
+                    type="number"
+                    value={worldHeight}
+                    onChange={(e) => setWorldHeight(Number(e.target.value))}
+                    min="5"
+                    max="50"
+                    step="1"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'textfield',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ 
+              fontSize: '13px', 
+              color: '#6b7280', 
+              padding: '16px',
+              backgroundColor: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+              fontWeight: '500'
+            }}>
+              Ball moves {(ballSpeed / fps).toFixed(3)} diameters per frame
+              {physicsWarning && (
+                <div style={{ 
+                  color: '#dc2626', 
+                  marginTop: '8px', 
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span style={{ fontSize: '16px' }}>⚠️</span> {physicsWarning}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Entity Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => addEntity("occluder")}
-            style={{ backgroundColor: "gray", color: "white", padding: "8px", borderRadius: "4px" }}
+        {/* Right Side - Canvas and Video Player */}
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "row", 
+          gap: "24px",
+          flex: 1,
+          justifyContent: "flex-start"
+        }}>
+          {/* Canvas Section */}
+          <div
+            style={{
+              position: "relative",
+              width: `${worldWidth * px_scale}px`,
+              height: `${worldHeight * px_scale}px`,
+              border: "3px solid #1e293b",
+              borderRadius: "0px",
+              overflow: "hidden",
+              flexShrink: 0,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+              backgroundColor: "#ffffff"
+            }}
+            onClick={() => setContextMenu({ visible: false, x: 0, y: 0, entityId: null })}
+            onContextMenu={(e) => e.preventDefault()}
           >
-            Add Occluder
-          </button>
-          <button
-            onClick={() => addEntity("barrier")}
-            style={{ backgroundColor: "black", color: "white", padding: "8px", borderRadius: "4px" }}
-          >
-            Add Barrier
-          </button>
-          <button
-            onClick={() => addEntity("red_sensor")}
-            style={{ backgroundColor: "red", color: "white", padding: "8px", borderRadius: "4px" }}
-          >
-            Add Red Sensor
-          </button>
-          <button
-            onClick={() => addEntity("green_sensor")}
-            style={{ backgroundColor: "green", color: "white", padding: "8px", borderRadius: "4px" }}
-          >
-            Add Green Sensor
-          </button>
-          <button
-            onClick={() => addEntity("target")}
-            style={{ backgroundColor: "blue", color: "white", padding: "8px", borderRadius: "4px" }}
-          >
-            Add Target
-          </button>
+            {entities.map((entity) => (
+              <React.Fragment key={entity.id}>
+              <Rnd
+              key={entity.id}
+              size={{
+                width: entity.type === "target" ? px_scale : entity.width * px_scale,
+                height: entity.type === "target" ? px_scale : entity.height * px_scale,
+              }}
+              position={{
+                x: entity.x * px_scale + border_px,
+                y: (worldHeight - entity.y - entity.height) * px_scale + border_px,
+              }}
+              onDragStop={(e, d) => {
+                const snappedX = Math.round((d.x - border_px) / (interval * px_scale)) * interval;
+                const snappedY = Math.round(
+                  (worldHeight - ((d.y - border_px) / px_scale + entity.height)) / interval
+                ) * interval;
+
+                const updatedEntity = {
+                  ...entity,
+                  x: Math.max(0, Math.min(snappedX, worldWidth - entity.width)),
+                  y: Math.max(0, Math.min(snappedY, worldHeight - entity.height)),
+                };
+                updateEntity(entity.id, updatedEntity);
+              }}
+              onResizeStop={(e, direction, ref, delta, position) => {
+                if (entity.type !== "target") {
+                  const snappedX = Math.round((position.x - border_px) / (interval * px_scale)) * interval;
+                  const snappedY = Math.round(
+                    (worldHeight -
+                      ((position.y - border_px) / px_scale + parseFloat(ref.style.height) / px_scale)) /
+                    interval
+                  ) * interval;
+
+                  const snappedWidth = Math.round(parseFloat(ref.style.width) / (interval * px_scale)) * interval;
+                  const snappedHeight = Math.round(parseFloat(ref.style.height) / (interval * px_scale)) * interval;
+
+                  const updatedEntity = {
+                    ...entity,
+                    x: Math.max(0, Math.min(snappedX, worldWidth - snappedWidth)),
+                    y: Math.max(0, Math.min(snappedY, worldHeight - snappedHeight)),
+                    width: snappedWidth,
+                    height: snappedHeight,
+                  };
+                  updateEntity(entity.id, updatedEntity);
+                }
+              }}
+              bounds="parent"
+              grid={[interval * px_scale, interval * px_scale]}
+              enableResizing={
+                entity.type !== "target"
+              }
+              style={{
+                backgroundColor: {
+                  occluder: "#6b7280",
+                  barrier: "#1f2937",
+                  red_sensor: "#ef4444",
+                  green_sensor: "#10b981",
+                  target: "#3b82f6",
+                }[entity.type],
+                borderRadius: entity.type === "target" ? "50%" : "0px",
+                border: "0px solid black",
+                cursor: "move",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onContextMenu={(e) => handleContextMenu(e, entity.id)}
+            />
+
+              {entity.type === "target" && renderArrowForTarget(entity)}
+              </React.Fragment>
+            ))}
+            {/* Context Menu */}
+            {contextMenu.visible && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: Math.min(contextMenu.y, worldHeight * px_scale - 50),
+                    left: Math.min(contextMenu.x, worldWidth * px_scale - 100),
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    zIndex: 1000,
+                    padding: "8px",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                  }}
+                >
+                  <button
+                    onClick={() => deleteEntity(contextMenu.entityId)}
+                    style={{
+                      cursor: "pointer",
+                      width: "100%",
+                      padding: "8px 12px",
+                      backgroundColor: "#ef4444",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      transition: "background-color 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = "#dc2626"}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = "#ef4444"}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+          </div>
+
+          {/* Video Player Section */}
+          <div style={{ 
+            flexShrink: 0,
+            borderRadius: "0px",
+            overflow: "hidden",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+          }}>
+            {simData ? (
+              <VideoPlayer 
+                simData={simData} 
+                fps={fps} 
+                trial_name={trial_name}
+                saveDirectoryHandle={saveDirectoryHandle}
+                worldWidth={worldWidth}
+                worldHeight={worldHeight}
+                ref={videoPlayerRef}
+              />
+            ) : (
+              <div
+                style={{
+                  width: `${vid_res}px`,
+                  height: `${vid_res}px`,
+                  border: "3px solid #1e293b",
+                  borderRadius: "0px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#f8fafc",
+                  color: "#6b7280",
+                  fontSize: "16px",
+                  fontWeight: "500"
+                }}
+              >
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.5 }}>📹</div>
+                  <p style={{ margin: 0 }}>No simulation data available</p>
+                  <p style={{ margin: "8px 0 0 0", fontSize: "14px", opacity: 0.7 }}>Run a simulation first</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <button
-          onClick={handleSimulate}
-          disabled={!isValidPhysics}
-          style={{
-            backgroundColor: isValidPhysics ? "orange" : "#ccc",
-            color: "white",
-            padding: "12px",
-            borderRadius: "4px",
-            marginTop: "10px",
-            cursor: isValidPhysics ? "pointer" : "not-allowed",
-          }}
-        >
-          {isValidPhysics ? "Simulate" : "Invalid Physics Parameters"}
-        </button>
+      {/* Bottom Section - All Controls and Buttons */}
+      <div style={{ 
+        background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", 
+        borderTop: "1px solid #475569",
+        padding: "16px 24px",
+        boxShadow: "0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)"
+      }}>
+        <div style={{ 
+          display: "flex", 
+          flexWrap: "wrap", 
+          gap: "12px", 
+          alignItems: "center",
+          justifyContent: "flex-start"
+        }}>
+          {/* Entity Buttons */}
+          <div style={{ 
+            display: "flex", 
+            gap: "8px", 
+            marginRight: "20px",
+            paddingRight: "20px",
+            borderRight: "1px solid #475569"
+          }}>
+            <button
+              onClick={() => addEntity("occluder")}
+              style={{ 
+                background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", 
+                color: "white", 
+                padding: "8px 14px", 
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              Add Occluder
+            </button>
+            <button
+              onClick={() => addEntity("barrier")}
+              style={{ 
+                background: "linear-gradient(135deg, #374151 0%, #1f2937 100%)", 
+                color: "white", 
+                padding: "8px 14px", 
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              Add Barrier
+            </button>
+            <button
+              onClick={() => addEntity("red_sensor")}
+              style={{ 
+                background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)", 
+                color: "white", 
+                padding: "8px 14px", 
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              Add Red Sensor
+            </button>
+            <button
+              onClick={() => addEntity("green_sensor")}
+              style={{ 
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", 
+                color: "white", 
+                padding: "8px 14px", 
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              Add Green Sensor
+            </button>
+            <button
+              onClick={() => addEntity("target")}
+              style={{ 
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", 
+                color: "white", 
+                padding: "8px 14px", 
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              Add Target
+            </button>
+          </div>
 
-        <div>
-          <label>
-            Trial Name:
+          {/* Action Buttons */}
+          <div style={{ 
+            display: "flex", 
+            gap: "8px", 
+            marginRight: "20px",
+            paddingRight: "20px",
+            borderRight: "1px solid #475569"
+          }}>
+            <button
+              onClick={handleSimulate}
+              disabled={!isValidPhysics}
+              style={{
+                background: isValidPhysics ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                color: "white",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: isValidPhysics ? "pointer" : "not-allowed",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                if (isValidPhysics) {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isValidPhysics) {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+                }
+              }}
+            >
+              {isValidPhysics ? "🚀 Simulate" : "Invalid Physics"}
+            </button>
+          </div>
+
+          {/* Trial Settings */}
+          <div style={{ 
+            display: "flex", 
+            gap: "8px", 
+            alignItems: "center",
+            marginRight: "20px",
+            paddingRight: "20px",
+            borderRight: "1px solid #475569"
+          }}>
+            <label style={{ 
+              fontSize: "12px", 
+              fontWeight: "600", 
+              color: "#e2e8f0"
+            }}>
+              Trial Name:
+            </label>
             <input
               type="text"
               value={trial_name}
               onChange={(e) => setTrial_name(e.target.value)}
-              className="ml-2 px-2 py-1 border rounded w-full"
-            />
-          </label>
-        </div>
-
-        <button
-          onClick={handleSetSaveDirectory}
-          style={{
-            backgroundColor: "blue",
-            color: "white",
-            padding: "12px",
-            borderRadius: "4px",
-            marginBottom: "10px",
-          }}
-        >
-          Select Save Directory
-        </button>
-
-        <div style={{ marginBottom: "10px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <input
-              type="checkbox"
-              checked={autoDownloadMP4}
-              onChange={(e) => setAutoDownloadMP4(e.target.checked)}
-            />
-            Auto-download MP4 when saving
-          </label>
-        </div>
-
-        <button
-          onClick={handleSavedata}
-          style={{
-            backgroundColor: "purple",
-            color: "white",
-            padding: "12px",
-            borderRadius: "4px",
-          }}
-        >
-          Save Data
-        </button>
-
-        <div>
-          <label
-            style={{
-              backgroundColor: "green",
-              color: "white",
-              padding: "8px",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Load Scene
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileLoad}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
-        <button
-          onClick={clearAllEntities}
-          style={{
-            backgroundColor: "white",
-            color: "black",
-            padding: "12px",
-            borderRadius: "4px",
-            marginTop: "10px",
-          }}
-        >
-          Clear All
-        </button>
-      </div>
-      <div
-        style={{
-          position: "relative",
-          width: `${worldWidth * px_scale}px`, // Fixed width for the canvas
-          height: `${worldHeight * px_scale}px`, // Fixed height for the canvas
-          border: `${border_px}px solid black`,
-          overflow: "hidden", // Ensures content doesn't overflow the fixed dimensions
-        }}
-        onClick={() => setContextMenu({ visible: false, x: 0, y: 0, entityId: null })}
-        onContextMenu={(e) => e.preventDefault()} // Prevent default browser context menu
-      >
-        {entities.map((entity) => (
-          <React.Fragment key={entity.id}>
-          <Rnd
-          key={entity.id}
-          size={{
-            width: entity.type === "target" ? px_scale : entity.width * px_scale,
-            height: entity.type === "target" ? px_scale : entity.height * px_scale,
-          }}
-          position={{
-            x: entity.x * px_scale + border_px,
-            y: (worldHeight - entity.y - entity.height) * px_scale + border_px,
-          }}
-          onDragStop={(e, d) => {
-            const snappedX = Math.round((d.x - border_px) / (interval * px_scale)) * interval;
-            const snappedY = Math.round(
-              (worldHeight - ((d.y - border_px) / px_scale + entity.height)) / interval
-            ) * interval;
-
-            const updatedEntity = {
-              ...entity,
-              x: Math.max(0, Math.min(snappedX, worldWidth - entity.width)),
-              y: Math.max(0, Math.min(snappedY, worldHeight - entity.height)),
-            };
-            updateEntity(entity.id, updatedEntity);
-          }}
-          onResizeStop={(e, direction, ref, delta, position) => {
-            if (entity.type !== "target") {
-              const snappedX = Math.round((position.x - border_px) / (interval * px_scale)) * interval;
-              const snappedY = Math.round(
-                (worldHeight -
-                  ((position.y - border_px) / px_scale + parseFloat(ref.style.height) / px_scale)) /
-                interval
-              ) * interval;
-
-              const snappedWidth = Math.round(parseFloat(ref.style.width) / (interval * px_scale)) * interval;
-              const snappedHeight = Math.round(parseFloat(ref.style.height) / (interval * px_scale)) * interval;
-
-              const updatedEntity = {
-                ...entity,
-                x: Math.max(0, Math.min(snappedX, worldWidth - snappedWidth)),
-                y: Math.max(0, Math.min(snappedY, worldHeight - snappedHeight)),
-                width: snappedWidth,
-                height: snappedHeight,
-              };
-              updateEntity(entity.id, updatedEntity);
-            }
-          }}
-          bounds="parent"
-          grid={[interval * px_scale, interval * px_scale]}
-          enableResizing={
-            entity.type !== "target" // Resizing is disabled only for the blue target
-          }
-          style={{
-            backgroundColor: {
-              occluder: "gray",
-              barrier: "black",
-              red_sensor: "red",
-              green_sensor: "green",
-              target: "blue",
-            }[entity.type],
-            borderRadius: entity.type === "target" ? "50%" : "0%",
-            border: "0px solid black",
-            cursor: "move",
-          }}
-          onContextMenu={(e) => handleContextMenu(e, entity.id)}
-        />
-
-          {entity.type === "target" && renderArrowForTarget(entity)}
-          </React.Fragment>
-        ))}
-        {/* Context Menu */}
-        {contextMenu.visible && (
-            <div
               style={{
-                position: "absolute",
-                top: Math.min(contextMenu.y, worldHeight * px_scale - 50), // Prevent overflow
-                left: Math.min(contextMenu.x, worldWidth * px_scale - 100), // Prevent overflow
-                backgroundColor: "white",
-                border: "1px solid black",
-                zIndex: 1000,
-                padding: "5px",
-                boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
+                padding: "6px 10px",
+                border: "2px solid #475569",
+                borderRadius: "4px",
+                fontSize: "12px",
+                outline: "none",
+                transition: "all 0.2s ease",
+                width: "100px",
+                backgroundColor: "#1e293b",
+                color: "#f1f5f9",
+                fontWeight: "500"
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#3b82f6";
+                e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#475569";
+                e.target.style.boxShadow = "none";
+              }}
+            />
+          </div>
+
+          {/* Save Controls */}
+          <div style={{ 
+            display: "flex", 
+            gap: "8px", 
+            alignItems: "center",
+            marginRight: "20px",
+            paddingRight: "20px",
+            borderRight: "1px solid #475569"
+          }}>
+            <button
+              onClick={handleSetSaveDirectory}
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                color: "white",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
               }}
             >
-              <button
-                onClick={() => deleteEntity(contextMenu.entityId)}
-                style={{
-                  cursor: "pointer",
-                  width: "100%",
-                  padding: "5px",
-                  backgroundColor: "red",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
+              📁 Select Save Directory
+            </button>
+            {saveDirectoryHandle && (
+              <div style={{
+                background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+                color: "#e2e8f0",
+                padding: "6px 10px",
+                borderRadius: "4px",
+                fontSize: "11px",
+                fontWeight: "500",
+                border: "1px solid #475569",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                maxWidth: "160px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}>
+                📂 {saveDirectoryHandle.name}
+              </div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <input
+                type="checkbox"
+                checked={autoDownloadMP4}
+                onChange={(e) => setAutoDownloadMP4(e.target.checked)}
+                style={{ 
+                  margin: 0,
+                  width: "14px",
+                  height: "14px",
+                  accentColor: "#3b82f6"
                 }}
-              >
-                Delete
-              </button>
+              />
+              <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "500" }}>
+                Auto-download MP4
+              </label>
             </div>
-          )}
-        </div>
-      {/* Video Player Section */}
-      <div style={{ marginLeft: "20px", border: `1px solid blue`,}}>
-        {simData ? (
-          <VideoPlayer 
-            simData={simData} 
-            width={vid_res} 
-            height={vid_res} 
-            fps={fps} 
-            trial_name={trial_name}
-            saveDirectoryHandle={saveDirectoryHandle}
-            ref={videoPlayerRef}
-          />
-        ) : (
-          <div
-            style={{
-              width: `${vid_res}px`,
-              height: `${vid_res}px`,
-              border: "1px solid black",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#f5f5f5",
-            }}
-          >
-            <p>No simulation data available. Run a simulation first.</p>
+            <button
+              onClick={handleSavedata}
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                color: "white",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              💾 Save Data
+            </button>
           </div>
-        )}
+
+          {/* File Controls */}
+          <div style={{ 
+            display: "flex", 
+            gap: "8px", 
+            alignItems: "center"
+          }}>
+            <label
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: "600",
+                transition: "all 0.2s ease",
+                margin: 0,
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                display: "inline-block"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              📂 Load Scene
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleFileLoad}
+                style={{ display: "none" }}
+              />
+            </label>
+            <button
+              onClick={clearAllEntities}
+              style={{
+                background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                color: "white",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }}
+            >
+              🗑️ Clear All
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

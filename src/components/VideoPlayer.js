@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
-const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveDirectoryHandle }, ref) => {
+const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle, worldWidth, worldHeight }, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -10,13 +10,28 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
 
   // Extract dimensions from simData
   const numFrames = simData ? simData.num_frames : 0;
-  const worldWidth = simData ? simData.scene_dims[0] : 20;
-  const worldHeight = simData ? simData.scene_dims[1] : 20;
+  const simWorldWidth = simData ? simData.scene_dims[0] : worldWidth;
+  const simWorldHeight = simData ? simData.scene_dims[1] : worldHeight;
   const interval = simData ? simData.interval : 0.1;
 
   // Calculate canvas dimensions based on simulation parameters
-  const canvasWidth = Math.floor(worldWidth / interval);
-  const canvasHeight = Math.floor(worldHeight / interval);
+  const canvasWidth = Math.floor(simWorldWidth / interval);
+  const canvasHeight = Math.floor(simWorldHeight / interval);
+
+  // Calculate display dimensions maintaining aspect ratio
+  const maxDisplaySize = 400; // Maximum display size
+  const aspectRatio = simWorldWidth / simWorldHeight;
+  
+  let displayWidth, displayHeight;
+  if (aspectRatio >= 1) {
+    // Landscape or square
+    displayWidth = maxDisplaySize;
+    displayHeight = maxDisplaySize / aspectRatio;
+  } else {
+    // Portrait
+    displayHeight = maxDisplaySize;
+    displayWidth = maxDisplaySize * aspectRatio;
+  }
 
   // Expose downloadMP4 function to parent component
   useImperativeHandle(ref, () => ({
@@ -40,10 +55,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         ctx.fillStyle = 'rgb(0, 255, 0)';
         
         // Convert world coordinates to canvas coordinates
-        const canvasX = (sensor.x / worldWidth) * canvasWidth;
-        const canvasY = canvasHeight - ((sensor.y + sensor.height) / worldHeight) * canvasHeight;
-        const canvasWidth_sensor = (sensor.width / worldWidth) * canvasWidth;
-        const canvasHeight_sensor = (sensor.height / worldHeight) * canvasHeight;
+        const canvasX = (sensor.x / simWorldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((sensor.y + sensor.height) / simWorldHeight) * canvasHeight;
+        const canvasWidth_sensor = (sensor.width / simWorldWidth) * canvasWidth;
+        const canvasHeight_sensor = (sensor.height / simWorldHeight) * canvasHeight;
         
         ctx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
       }
@@ -53,10 +68,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         ctx.fillStyle = 'rgb(255, 0, 0)';
         
         // Convert world coordinates to canvas coordinates
-        const canvasX = (sensor.x / worldWidth) * canvasWidth;
-        const canvasY = canvasHeight - ((sensor.y + sensor.height) / worldHeight) * canvasHeight;
-        const canvasWidth_sensor = (sensor.width / worldWidth) * canvasWidth;
-        const canvasHeight_sensor = (sensor.height / worldHeight) * canvasHeight;
+        const canvasX = (sensor.x / simWorldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((sensor.y + sensor.height) / simWorldHeight) * canvasHeight;
+        const canvasWidth_sensor = (sensor.width / simWorldWidth) * canvasWidth;
+        const canvasHeight_sensor = (sensor.height / simWorldHeight) * canvasHeight;
         
         ctx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
       }
@@ -66,10 +81,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         ctx.fillStyle = 'rgb(0, 0, 0)';
         
         // Convert world coordinates to canvas coordinates
-        const canvasX = (barrier.x / worldWidth) * canvasWidth;
-        const canvasY = canvasHeight - ((barrier.y + barrier.height) / worldHeight) * canvasHeight;
-        const canvasWidth_barrier = (barrier.width / worldWidth) * canvasWidth;
-        const canvasHeight_barrier = (barrier.height / worldHeight) * canvasHeight;
+        const canvasX = (barrier.x / simWorldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((barrier.y + barrier.height) / simWorldHeight) * canvasHeight;
+        const canvasWidth_barrier = (barrier.width / simWorldWidth) * canvasWidth;
+        const canvasHeight_barrier = (barrier.height / simWorldHeight) * canvasHeight;
         
         ctx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
       }); 
@@ -83,9 +98,9 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         const ty = targetData.y;
 
         // Convert world coordinates to canvas coordinates
-        const canvasX = (tx + radius) * (canvasWidth / worldWidth);
-        const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / worldHeight));
-        const canvasRadius = radius * (canvasWidth / worldWidth);
+        const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+        const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+        const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
         ctx.fillStyle = 'rgb(0, 0, 255)';
         ctx.beginPath();
@@ -98,10 +113,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         ctx.fillStyle = 'rgb(128, 128, 128)';
         
         // Convert world coordinates to canvas coordinates
-        const canvasX = (occluder.x / worldWidth) * canvasWidth;
-        const canvasY = canvasHeight - ((occluder.y + occluder.height) / worldHeight) * canvasHeight;
-        const canvasWidth_occluder = (occluder.width / worldWidth) * canvasWidth;
-        const canvasHeight_occluder = (occluder.height / worldHeight) * canvasHeight;
+        const canvasX = (occluder.x / simWorldWidth) * canvasWidth;
+        const canvasY = canvasHeight - ((occluder.y + occluder.height) / simWorldHeight) * canvasHeight;
+        const canvasWidth_occluder = (occluder.width / simWorldWidth) * canvasWidth;
+        const canvasHeight_occluder = (occluder.height / simWorldHeight) * canvasHeight;
         
         ctx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
       }); 
@@ -245,10 +260,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         tempCtx.fillStyle = 'rgb(0, 255, 0)';
         
         // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (sensor.x / worldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / worldHeight) * tempCanvas.height;
-        const canvasWidth_sensor = (sensor.width / worldWidth) * tempCanvas.width;
-        const canvasHeight_sensor = (sensor.height / worldHeight) * tempCanvas.height;
+        const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
+        const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
+        const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
+        const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
         
         tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
       }
@@ -258,10 +273,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         tempCtx.fillStyle = 'rgb(255, 0, 0)';
         
         // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (sensor.x / worldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / worldHeight) * tempCanvas.height;
-        const canvasWidth_sensor = (sensor.width / worldWidth) * tempCanvas.width;
-        const canvasHeight_sensor = (sensor.height / worldHeight) * tempCanvas.height;
+        const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
+        const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
+        const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
+        const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
         
         tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
       }
@@ -271,10 +286,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         tempCtx.fillStyle = 'rgb(0, 0, 0)';
         
         // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (barrier.x / worldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((barrier.y + barrier.height) / worldHeight) * tempCanvas.height;
-        const canvasWidth_barrier = (barrier.width / worldWidth) * tempCanvas.width;
-        const canvasHeight_barrier = (barrier.height / worldHeight) * tempCanvas.height;
+        const canvasX = (barrier.x / simWorldWidth) * tempCanvas.width;
+        const canvasY = tempCanvas.height - ((barrier.y + barrier.height) / simWorldHeight) * tempCanvas.height;
+        const canvasWidth_barrier = (barrier.width / simWorldWidth) * tempCanvas.width;
+        const canvasHeight_barrier = (barrier.height / simWorldHeight) * tempCanvas.height;
         
         tempCtx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
       }); 
@@ -288,9 +303,9 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         const ty = targetData.y;
 
         // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (tx + radius) * (tempCanvas.width / worldWidth);
-        const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / worldHeight));
-        const canvasRadius = radius * (tempCanvas.width / worldWidth);
+        const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+        const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+        const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
         tempCtx.fillStyle = 'rgb(0, 0, 255)';
         tempCtx.beginPath();
@@ -303,10 +318,10 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
         tempCtx.fillStyle = 'rgb(128, 128, 128)';
         
         // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (occluder.x / worldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((occluder.y + occluder.height) / worldHeight) * tempCanvas.height;
-        const canvasWidth_occluder = (occluder.width / worldWidth) * tempCanvas.width;
-        const canvasHeight_occluder = (occluder.height / worldHeight) * tempCanvas.height;
+        const canvasX = (occluder.x / simWorldWidth) * tempCanvas.width;
+        const canvasY = tempCanvas.height - ((occluder.y + occluder.height) / simWorldHeight) * tempCanvas.height;
+        const canvasWidth_occluder = (occluder.width / simWorldWidth) * tempCanvas.width;
+        const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
         
         tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
       }); 
@@ -331,57 +346,155 @@ const VideoPlayer = forwardRef(({ simData, width, height, fps, trial_name, saveD
     return (
       <div
         style={{
-          width: `${width}px`,
-          height: `${height}px`,
-          border: "1px solid black",
+          width: `${displayWidth}px`,
+          height: `${displayHeight}px`,
+          border: "3px solid #1e293b",
+          borderRadius: "0px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "#f8fafc",
+          color: "#6b7280",
+          fontSize: "16px",
+          fontWeight: "500",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
         }}
       >
-        <p>No simulation data available. Run a simulation first.</p>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.5 }}>📹</div>
+          <p style={{ margin: 0 }}>No simulation data available</p>
+          <p style={{ margin: "8px 0 0 0", fontSize: "14px", opacity: 0.7 }}>Run a simulation first</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div style={{ 
+      display: "flex", 
+      flexDirection: "column", 
+      gap: "16px",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    }}>
       <canvas
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
         style={{
-          width: `${width}px`,
-          height: `${height}px`,
+          width: `${displayWidth}px`,
+          height: `${displayHeight}px`,
           objectFit: 'contain',
-          border: '2px solid black',
+          border: '3px solid #1e293b',
+          borderRadius: '0px',
           boxSizing: 'border-box',
-          imageRendering: 'pixelated', // Keep pixels crisp when scaling
+          imageRendering: 'pixelated',
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          backgroundColor: "#ffffff"
         }}
       />
-      <div className="flex flex-col gap-2">
-        <button
-          onClick={handlePlayPause}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          {isPlaying ? 'Pause' : 'Play'}
-        </button>
-        <button
-          onClick={downloadMP4}
-          className="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          Download Video
-        </button>
-        <input
-          type="range"
-          min="0"
-          max={numFrames - 1}
-          value={currentFrame}
-          onChange={handleSeek}
-          className="w-full"
-        />
-        <div className="text-sm text-gray-600">
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "8px",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+        padding: "12px",
+        borderRadius: "12px",
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+      }}>
+        <div style={{ 
+          display: "flex", 
+          gap: "8px",
+          marginBottom: "6px"
+        }}>
+          <button
+            onClick={handlePlayPause}
+            style={{
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              color: "white",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+              flex: 1
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+            }}
+          >
+            {isPlaying ? "⏸️ Pause" : "▶️ Play"}
+          </button>
+          <button
+            onClick={downloadMP4}
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              color: "white",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+              flex: 1
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+            }}
+          >
+            📥 Download
+          </button>
+        </div>
+        
+        <div style={{ marginBottom: "6px" }}>
+          <input
+            type="range"
+            min="0"
+            max={numFrames - 1}
+            value={currentFrame}
+            onChange={handleSeek}
+            style={{
+              width: "100%",
+              height: "4px",
+              borderRadius: "2px",
+              background: "linear-gradient(90deg, #3b82f6 0%, #e5e7eb 0%)",
+              outline: "none",
+              WebkitAppearance: "none",
+              cursor: "pointer"
+            }}
+            onInput={(e) => {
+              const value = e.target.value;
+              const percentage = (value / (numFrames - 1)) * 100;
+              e.target.style.background = `linear-gradient(90deg, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%)`;
+            }}
+          />
+        </div>
+        
+        <div style={{ 
+          fontSize: "12px", 
+          color: "#6b7280", 
+          fontWeight: "500",
+          textAlign: "center",
+          padding: "6px 8px",
+          backgroundColor: "#f9fafb",
+          borderRadius: "4px",
+          border: "1px solid #e5e7eb"
+        }}>
           Frame: {currentFrame + 1} / {numFrames}
         </div>
       </div>
