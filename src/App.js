@@ -37,7 +37,7 @@ function App() {
   // Saving and Loading params
   const [trial_name, setTrial_name] = useState('base'); // Default res multiplier
   const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null); // State to store the actual directory handle
-  const [autoDownloadMP4, setAutoDownloadMP4] = useState(false); // State for MP4 download toggle
+  const [autoDownloadWebM, setAutoDownloadWebM] = useState(false); // State for WebM download toggle
 
   const px_scale = 25;
   const interval = 0.1;
@@ -371,9 +371,9 @@ function App() {
       
       alert("Data saved successfully!");
       
-      // If auto download is enabled and we have simulation data, download the MP4
-      if (autoDownloadMP4 && simData && videoPlayerRef.current) {
-        videoPlayerRef.current.downloadMP4();
+      // If auto download is enabled and we have simulation data, download the WebM
+      if (autoDownloadWebM && simData && videoPlayerRef.current) {
+        videoPlayerRef.current.downloadWebM();
       }
     } catch (error) {
       console.error("Error saving data:", error);
@@ -1218,8 +1218,8 @@ function App() {
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
                 type="checkbox"
-                checked={autoDownloadMP4}
-                onChange={(e) => setAutoDownloadMP4(e.target.checked)}
+                checked={autoDownloadWebM}
+                onChange={(e) => setAutoDownloadWebM(e.target.checked)}
                 style={{ 
                   margin: 0,
                   width: "14px",
@@ -1228,7 +1228,7 @@ function App() {
                 }}
               />
               <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "500" }}>
-                Auto-download MP4
+                Auto-download WebM
               </label>
             </div>
             <button

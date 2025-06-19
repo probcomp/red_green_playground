@@ -4,7 +4,7 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
-  const [isConverting, setIsConverting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const animationRef = useRef(null);
   const lastFrameTime = useRef(0);
 
@@ -33,7 +33,7 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
     displayWidth = maxDisplaySize * aspectRatio;
   }
 
-  const downloadMP4 = async () => {
+  const downloadWebM = async () => {
     if (!simData) {
       console.error("No simulation data available for download");
       return;
@@ -80,78 +80,28 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
       mediaRecorder.onstop = async () => {
         const webmBlob = new Blob(chunks, { type: 'video/webm' });
         
-        setIsConverting(true);
-        try {
-          // Convert WebM blob to base64
-          const reader = new FileReader();
-          const webmBase64 = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(webmBlob);
-          });
-          
-          // Send to server for conversion
-          const response = await fetch('/convert_webm_to_mp4', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              webm_data: webmBase64,
-              trial_name: trial_name,
-              fps: fps
-            }),
-          });
-          
-          const result = await response.json();
-          
-          if (result.status === 'success') {
-            // Convert base64 back to blob
-            const mp4Base64 = result.mp4_data;
-            const mp4Data = atob(mp4Base64);
-            const mp4Array = new Uint8Array(mp4Data.length);
-            for (let i = 0; i < mp4Data.length; i++) {
-              mp4Array[i] = mp4Data.charCodeAt(i);
-            }
-            const mp4Blob = new Blob([mp4Array], { type: 'video/mp4' });
-            
-            // If saveDirectoryHandle is available, save to the selected directory
-            if (saveDirectoryHandle) {
-              try {
-                const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
-                const videoFileHandle = await trialDirHandle.getFileHandle(`${trial_name}.mp4`, { create: true });
-                const videoWritable = await videoFileHandle.createWritable();
-                await videoWritable.write(mp4Blob);
-                await videoWritable.close();
-              } catch (error) {
-                console.error("Error saving video to directory:", error);
-                // Fallback to download if directory save fails
-                const url = URL.createObjectURL(mp4Blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${trial_name}.mp4`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }
-            } else {
-              // Download MP4 file
-              const url = URL.createObjectURL(mp4Blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `${trial_name}.mp4`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }
-          } else {
-            throw new Error(result.message || 'Server conversion failed');
+        // If saveDirectoryHandle is available, save to the selected directory
+        if (saveDirectoryHandle) {
+          try {
+            const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
+            const videoFileHandle = await trialDirHandle.getFileHandle(`${trial_name}.webm`, { create: true });
+            const videoWritable = await videoFileHandle.createWritable();
+            await videoWritable.write(webmBlob);
+            await videoWritable.close();
+          } catch (error) {
+            console.error("Error saving video to directory:", error);
+            // Fallback to download if directory save fails
+            const url = URL.createObjectURL(webmBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${trial_name}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
           }
-        } catch (error) {
-          console.error("MP4 conversion failed:", error);
-          // Fallback: download the WebM file directly
+        } else {
+          // Download WebM file directly
           const url = URL.createObjectURL(webmBlob);
           const a = document.createElement('a');
           a.href = url;
@@ -160,18 +110,17 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-        } finally {
-          setIsConverting(false);
         }
       };
 
       mediaRecorder.onerror = (event) => {
         console.error("MediaRecorder error:", event);
-        setIsConverting(false);
+        setIsRecording(false);
       };
 
       // Start recording
       mediaRecorder.start();
+      setIsRecording(true);
 
       // Background rendering function (doesn't affect visible canvas)
       const renderFrameToTempCanvas = (frameIndex) => {
@@ -262,18 +211,19 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
           clearInterval(frameInterval);
           setTimeout(() => {
             mediaRecorder.stop();
+            setIsRecording(false);
           }, 100);
         }
       }, 1000 / fps);
     } catch (error) {
-      console.error("Error in downloadMP4:", error);
-      setIsConverting(false);
+      console.error("Error in downloadWebM:", error);
+      setIsRecording(false);
     }
   };
 
-  // Expose downloadMP4 function to parent component
+  // Expose downloadWebM function to parent component
   useImperativeHandle(ref, () => ({
-    downloadMP4: downloadMP4
+    downloadWebM: downloadWebM
   }), [simData, trial_name, fps, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, saveDirectoryHandle]);
 
   useEffect(() => {
@@ -496,35 +446,35 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
             {isPlaying ? "⏸️ Pause" : "▶️ Play"}
           </button>
           <button
-            onClick={downloadMP4}
-            disabled={isConverting}
+            onClick={downloadWebM}
+            disabled={isRecording}
             style={{
-              background: isConverting ? "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              background: isRecording ? "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
               color: "white",
               padding: "8px 12px",
               borderRadius: "6px",
               border: "none",
               fontSize: "12px",
               fontWeight: "600",
-              cursor: isConverting ? "not-allowed" : "pointer",
+              cursor: isRecording ? "not-allowed" : "pointer",
               transition: "all 0.2s ease",
               boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
               flex: 1
             }}
             onMouseEnter={(e) => {
-              if (!isConverting) {
+              if (!isRecording) {
                 e.target.style.transform = "translateY(-1px)";
                 e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
               }
             }}
             onMouseLeave={(e) => {
-              if (!isConverting) {
+              if (!isRecording) {
                 e.target.style.transform = "translateY(0)";
                 e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
               }
             }}
           >
-            {isConverting ? "🔄 Converting..." : "📥 Download MP4"}
+            {isRecording ? "🔄 Recording..." : "📥 Download WebM"}
           </button>
         </div>
         

@@ -1,7 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
-import base64
-import tempfile
 
 # PHYSICS SIM
 
@@ -387,86 +385,6 @@ def clear_simulation():
     GLOBAL_SIM_DATA = None
     print("Simulation cleared successfully.")
     return jsonify({"status": "success", "message": "Simulation cleared."})
-
-@app.route("/convert_webm_to_mp4", methods=["POST"])
-def convert_webm_to_mp4():
-    try:
-        data = request.json
-        webm_base64 = data.get("webm_data")
-        trial_name = data.get("trial_name", "video")
-        fps = data.get("fps", 30)
-        
-        if not webm_base64:
-            return jsonify({"status": "error", "message": "No WebM data provided"}), 400
-        
-        # Decode base64 WebM data
-        webm_data = base64.b64decode(webm_base64.split(',')[1] if ',' in webm_base64 else webm_base64)
-        
-        # Create temporary files
-        with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as webm_temp:
-            webm_temp.write(webm_data)
-            webm_path = webm_temp.name
-        
-        mp4_path = webm_path.replace('.webm', '.mp4')
-        
-        try:
-            import subprocess
-            import shutil
-            
-            # Check if ffmpeg is available
-            if shutil.which('ffmpeg') is None:
-                # Try to use ffmpeg from Heroku buildpack if available
-                ffmpeg_path = '/app/vendor/ffmpeg/ffmpeg'
-                if not os.path.exists(ffmpeg_path):
-                    return jsonify({"status": "error", "message": "FFmpeg not available. Please install FFmpeg buildpack."}), 500
-                ffmpeg_cmd = [ffmpeg_path]
-            else:
-                ffmpeg_cmd = ['ffmpeg']
-            
-            # Simple ffmpeg conversion without duration specification
-            # Let ffmpeg handle the duration automatically
-            full_cmd = ffmpeg_cmd + [
-                '-y',  # Overwrite output
-                '-i', webm_path,
-                '-c:v', 'libx264',
-                '-preset', 'ultrafast',
-                '-crf', '23',
-                '-pix_fmt', 'yuv420p',  # Ensure compatibility
-                mp4_path
-            ]
-            
-            result = subprocess.run(full_cmd, capture_output=True, text=True)
-            
-            if result.returncode != 0:
-                raise Exception(f"FFmpeg conversion failed: {result.stderr}")
-            
-            # Read the converted MP4 file
-            with open(mp4_path, 'rb') as mp4_file:
-                mp4_data = mp4_file.read()
-            
-            # Clean up temporary files
-            os.unlink(webm_path)
-            os.unlink(mp4_path)
-            
-            # Return MP4 data as base64
-            mp4_base64 = base64.b64encode(mp4_data).decode('utf-8')
-            
-            return jsonify({
-                "status": "success", 
-                "mp4_data": mp4_base64,
-                "message": "WebM successfully converted to MP4"
-            })
-            
-        except Exception as conversion_error:
-            # Clean up temporary files on error
-            if os.path.exists(webm_path):
-                os.unlink(webm_path)
-            if os.path.exists(mp4_path):
-                os.unlink(mp4_path)
-            raise conversion_error
-            
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Conversion failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
