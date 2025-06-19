@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
-import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
 const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle, worldWidth, worldHeight }, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [isConverting, setIsConverting] = useState(false);
   const animationRef = useRef(null);
   const lastFrameTime = useRef(0);
 
@@ -32,6 +32,244 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
     displayHeight = maxDisplaySize;
     displayWidth = maxDisplaySize * aspectRatio;
   }
+
+  const downloadMP4 = async () => {
+    if (!simData) {
+      console.error("No simulation data available for download");
+      return;
+    }
+
+    try {
+      // Test if MediaRecorder is supported
+      if (!window.MediaRecorder) {
+        throw new Error("MediaRecorder is not supported in this browser");
+      }
+
+      // Test if the required codec is supported
+      const supportedTypes = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
+        ? 'video/webm;codecs=vp9' 
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+        ? 'video/webm;codecs=vp8'
+        : 'video/webm';
+
+      // Create a temporary off-screen canvas with 3x resolution for high quality recording
+      const tempCanvas = document.createElement('canvas');
+      const scaleFactor = 3;
+      tempCanvas.width = canvasWidth * scaleFactor;
+      tempCanvas.height = canvasHeight * scaleFactor;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      // Disable image smoothing for crisp pixels
+      tempCtx.imageSmoothingEnabled = false;
+
+      // Create off-screen stream (won't affect visible canvas)
+      const stream = tempCanvas.captureStream(fps);
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: supportedTypes,
+        videoBitsPerSecond: 8000000 // High bitrate for quality
+      });
+
+      const chunks = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const webmBlob = new Blob(chunks, { type: 'video/webm' });
+        
+        setIsConverting(true);
+        try {
+          // Convert WebM blob to base64
+          const reader = new FileReader();
+          const webmBase64 = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(webmBlob);
+          });
+          
+          // Send to server for conversion
+          const response = await fetch('/convert_webm_to_mp4', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              webm_data: webmBase64,
+              trial_name: trial_name,
+              fps: fps
+            }),
+          });
+          
+          const result = await response.json();
+          
+          if (result.status === 'success') {
+            // Convert base64 back to blob
+            const mp4Base64 = result.mp4_data;
+            const mp4Data = atob(mp4Base64);
+            const mp4Array = new Uint8Array(mp4Data.length);
+            for (let i = 0; i < mp4Data.length; i++) {
+              mp4Array[i] = mp4Data.charCodeAt(i);
+            }
+            const mp4Blob = new Blob([mp4Array], { type: 'video/mp4' });
+            
+            // If saveDirectoryHandle is available, save to the selected directory
+            if (saveDirectoryHandle) {
+              try {
+                const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
+                const videoFileHandle = await trialDirHandle.getFileHandle(`${trial_name}.mp4`, { create: true });
+                const videoWritable = await videoFileHandle.createWritable();
+                await videoWritable.write(mp4Blob);
+                await videoWritable.close();
+              } catch (error) {
+                console.error("Error saving video to directory:", error);
+                // Fallback to download if directory save fails
+                const url = URL.createObjectURL(mp4Blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${trial_name}.mp4`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }
+            } else {
+              // Download MP4 file
+              const url = URL.createObjectURL(mp4Blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${trial_name}.mp4`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }
+          } else {
+            throw new Error(result.message || 'Server conversion failed');
+          }
+        } catch (error) {
+          console.error("MP4 conversion failed:", error);
+          // Fallback: download the WebM file directly
+          const url = URL.createObjectURL(webmBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${trial_name}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } finally {
+          setIsConverting(false);
+        }
+      };
+
+      mediaRecorder.onerror = (event) => {
+        console.error("MediaRecorder error:", event);
+        setIsConverting(false);
+      };
+
+      // Start recording
+      mediaRecorder.start();
+
+      // Background rendering function (doesn't affect visible canvas)
+      const renderFrameToTempCanvas = (frameIndex) => {
+        // Clear temp canvas
+        tempCtx.fillStyle = 'white';
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height); 
+
+        // Render sensors first 
+        if (simData.green_sensor) {
+          const sensor = simData.green_sensor;
+          tempCtx.fillStyle = 'rgb(0, 255, 0)';
+          
+          // Convert world coordinates to temp canvas coordinates with scale factor
+          const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
+          const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
+          const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
+          const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
+          
+          tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
+        }
+
+        if (simData.red_sensor) {
+          const sensor = simData.red_sensor;
+          tempCtx.fillStyle = 'rgb(255, 0, 0)';
+          
+          // Convert world coordinates to temp canvas coordinates with scale factor
+          const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
+          const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
+          const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
+          const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
+          
+          tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
+        }
+
+        // Render barriers
+        simData.barriers.forEach(barrier => {
+          tempCtx.fillStyle = 'rgb(0, 0, 0)';
+          
+          // Convert world coordinates to temp canvas coordinates with scale factor
+          const canvasX = (barrier.x / simWorldWidth) * tempCanvas.width;
+          const canvasY = tempCanvas.height - ((barrier.y + barrier.height) / simWorldHeight) * tempCanvas.height;
+          const canvasWidth_barrier = (barrier.width / simWorldWidth) * tempCanvas.width;
+          const canvasHeight_barrier = (barrier.height / simWorldHeight) * tempCanvas.height;
+          
+          tempCtx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
+        }); 
+
+        // Render target if frame data exists
+        if (simData.step_data && simData.step_data[frameIndex]) {
+          const targetData = simData.step_data[frameIndex];
+          const targetSize = simData.target.size;
+          const radius = targetSize / 2;
+          const tx = targetData.x;
+          const ty = targetData.y;
+
+          // Convert world coordinates to temp canvas coordinates with scale factor
+          const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+          const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+          const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+          tempCtx.fillStyle = 'rgb(0, 0, 255)';
+          tempCtx.beginPath();
+          tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+          tempCtx.fill();
+        }
+
+        // Render occluders last
+        simData.occluders.forEach(occluder => {
+          tempCtx.fillStyle = 'rgb(128, 128, 128)';
+          
+          // Convert world coordinates to temp canvas coordinates with scale factor
+          const canvasX = (occluder.x / simWorldWidth) * tempCanvas.width;
+          const canvasY = tempCanvas.height - ((occluder.y + occluder.height) / simWorldHeight) * tempCanvas.height;
+          const canvasWidth_occluder = (occluder.width / simWorldWidth) * tempCanvas.width;
+          const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
+          
+          tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
+        }); 
+      };
+
+      // Render all frames in background with timing (doesn't affect visible canvas)
+      let frameIndex = 0;
+      const frameInterval = setInterval(() => {
+        renderFrameToTempCanvas(frameIndex);
+        frameIndex++;
+        
+        if (frameIndex >= numFrames) {
+          clearInterval(frameInterval);
+          setTimeout(() => {
+            mediaRecorder.stop();
+          }, 100);
+        }
+      }, 1000 / fps);
+    } catch (error) {
+      console.error("Error in downloadMP4:", error);
+      setIsConverting(false);
+    }
+  };
 
   // Expose downloadMP4 function to parent component
   useImperativeHandle(ref, () => ({
@@ -166,182 +404,6 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
     setCurrentFrame(seekPosition);
   }; 
 
-  const downloadMP4 = async () => {
-    if (!simData) return;
-
-    // Create a temporary off-screen canvas with 3x resolution for high quality recording
-    const tempCanvas = document.createElement('canvas');
-    const scaleFactor = 3;
-    tempCanvas.width = canvasWidth * scaleFactor;
-    tempCanvas.height = canvasHeight * scaleFactor;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Disable image smoothing for crisp pixels
-    tempCtx.imageSmoothingEnabled = false;
-
-    // Create off-screen stream (won't affect visible canvas)
-    const stream = tempCanvas.captureStream(fps);
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9',
-      videoBitsPerSecond: 8000000 // High bitrate for quality
-    });
-
-    const chunks = [];
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunks.push(event.data);
-      }
-    };
-
-    mediaRecorder.onstop = async () => {
-      const webmBlob = new Blob(chunks, { type: 'video/webm' });
-      const webmBuffer = await webmBlob.arrayBuffer();
-  
-      const ffmpeg = createFFmpeg({ log: true });
-      await ffmpeg.load();
-  
-      const inputName = 'input.webm';
-      const outputName = 'output.mp4';
-  
-      ffmpeg.FS('writeFile', inputName, new Uint8Array(webmBuffer));
-  
-      await ffmpeg.run('-i', inputName, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', outputName);
-  
-      const mp4Data = ffmpeg.FS('readFile', outputName);
-  
-      const mp4Blob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
-      
-      // If saveDirectoryHandle is available, save to the selected directory
-      if (saveDirectoryHandle) {
-        try {
-          const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
-          const videoFileHandle = await trialDirHandle.getFileHandle(`${trial_name}.mp4`, { create: true });
-          const videoWritable = await videoFileHandle.createWritable();
-          await videoWritable.write(mp4Blob);
-          await videoWritable.close();
-          console.log(`Video saved to ${trial_name}/${trial_name}.mp4`);
-        } catch (error) {
-          console.error("Error saving video to directory:", error);
-          // Fallback to download if directory save fails
-          const url = URL.createObjectURL(mp4Blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${trial_name}.mp4`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
-      } else {
-        // Fallback to download if no directory is selected
-        const url = URL.createObjectURL(mp4Blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${trial_name}.mp4`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    };  
-
-    // Start recording
-    mediaRecorder.start();
-
-    // Background rendering function (doesn't affect visible canvas)
-    const renderFrameToTempCanvas = (frameIndex) => {
-      // Clear temp canvas
-      tempCtx.fillStyle = 'white';
-      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height); 
-
-      // Render sensors first 
-      if (simData.green_sensor) {
-        const sensor = simData.green_sensor;
-        tempCtx.fillStyle = 'rgb(0, 255, 0)';
-        
-        // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
-        const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
-        const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
-        
-        tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
-      }
-
-      if (simData.red_sensor) {
-        const sensor = simData.red_sensor;
-        tempCtx.fillStyle = 'rgb(255, 0, 0)';
-        
-        // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
-        const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
-        const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
-        
-        tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
-      }
-
-      // Render barriers
-      simData.barriers.forEach(barrier => {
-        tempCtx.fillStyle = 'rgb(0, 0, 0)';
-        
-        // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (barrier.x / simWorldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((barrier.y + barrier.height) / simWorldHeight) * tempCanvas.height;
-        const canvasWidth_barrier = (barrier.width / simWorldWidth) * tempCanvas.width;
-        const canvasHeight_barrier = (barrier.height / simWorldHeight) * tempCanvas.height;
-        
-        tempCtx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
-      }); 
-
-      // Render target if frame data exists
-      if (simData.step_data && simData.step_data[frameIndex]) {
-        const targetData = simData.step_data[frameIndex];
-        const targetSize = simData.target.size;
-        const radius = targetSize / 2;
-        const tx = targetData.x;
-        const ty = targetData.y;
-
-        // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-        const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-        const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
-
-        tempCtx.fillStyle = 'rgb(0, 0, 255)';
-        tempCtx.beginPath();
-        tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-        tempCtx.fill();
-      }
-
-      // Render occluders last
-      simData.occluders.forEach(occluder => {
-        tempCtx.fillStyle = 'rgb(128, 128, 128)';
-        
-        // Convert world coordinates to temp canvas coordinates with scale factor
-        const canvasX = (occluder.x / simWorldWidth) * tempCanvas.width;
-        const canvasY = tempCanvas.height - ((occluder.y + occluder.height) / simWorldHeight) * tempCanvas.height;
-        const canvasWidth_occluder = (occluder.width / simWorldWidth) * tempCanvas.width;
-        const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
-        
-        tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
-      }); 
-    };
-
-    // Render all frames in background with timing (doesn't affect visible canvas)
-    let frameIndex = 0;
-    const frameInterval = setInterval(() => {
-      renderFrameToTempCanvas(frameIndex);
-      frameIndex++;
-      
-      if (frameIndex >= numFrames) {
-        clearInterval(frameInterval);
-        setTimeout(() => {
-          mediaRecorder.stop();
-        }, 100);
-      }
-    }, 1000 / fps);
-  };
-
   if (!simData) {
     return (
       <div
@@ -435,29 +497,34 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
           </button>
           <button
             onClick={downloadMP4}
+            disabled={isConverting}
             style={{
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              background: isConverting ? "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
               color: "white",
               padding: "8px 12px",
               borderRadius: "6px",
               border: "none",
               fontSize: "12px",
               fontWeight: "600",
-              cursor: "pointer",
+              cursor: isConverting ? "not-allowed" : "pointer",
               transition: "all 0.2s ease",
               boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
               flex: 1
             }}
             onMouseEnter={(e) => {
-              e.target.style.transform = "translateY(-1px)";
-              e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              if (!isConverting) {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+              }
             }}
             onMouseLeave={(e) => {
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              if (!isConverting) {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+              }
             }}
           >
-            📥 Download
+            {isConverting ? "🔄 Converting..." : "📥 Download MP4"}
           </button>
         </div>
         
