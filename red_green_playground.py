@@ -209,13 +209,27 @@ def run_simulation_with_visualization(entities, simulationParams):
         # NOTE: NEED TO PROCESS THIS IN RED AND IN GREEN!!!!!
         if 'red_sensor' in sim_data or 'green_sensor' in sim_data:
             if 'red_sensor' in sim_data:
-                size = sim_data['target']['size']
-                in_red = tx + size >= sim_data['red_sensor']['x'] and tx <= sim_data['red_sensor']['x'] + sim_data['red_sensor']['width'] and ty + size >= sim_data['red_sensor']['y'] and ty <= sim_data['red_sensor']['y'] + sim_data['red_sensor']['height']
+                radius = sim_data['target']['size'] / 2
+                center_x = tx + radius
+                center_y = ty + radius
+                red_sensor = sim_data['red_sensor']
+                # Check if circle overlaps with rectangle
+                closest_x = max(red_sensor['x'], min(center_x, red_sensor['x'] + red_sensor['width']))
+                closest_y = max(red_sensor['y'], min(center_y, red_sensor['y'] + red_sensor['height']))
+                distance_sq = (center_x - closest_x)**2 + (center_y - closest_y)**2
+                in_red = distance_sq <= radius**2
             else:
                 in_red = False
             if 'green_sensor' in sim_data:
-                size = sim_data['target']['size']
-                in_green = tx + size >= sim_data['green_sensor']['x'] and tx <= sim_data['green_sensor']['x'] + sim_data['green_sensor']['width'] and ty + size >= sim_data['green_sensor']['y'] and ty <= sim_data['green_sensor']['y'] + sim_data['green_sensor']['height']
+                radius = sim_data['target']['size'] / 2
+                center_x = tx + radius
+                center_y = ty + radius
+                green_sensor = sim_data['green_sensor']
+                # Check if circle overlaps with rectangle
+                closest_x = max(green_sensor['x'], min(center_x, green_sensor['x'] + green_sensor['width']))
+                closest_y = max(green_sensor['y'], min(center_y, green_sensor['y'] + green_sensor['height']))
+                distance_sq = (center_x - closest_x)**2 + (center_y - closest_y)**2
+                in_green = distance_sq <= radius**2
             else:
                 in_green = False
         else:

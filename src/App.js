@@ -336,8 +336,9 @@ function App() {
     try {
       // Check if trial directory already exists
       let trialDirExists = false;
+      let existingTrialDirHandle = null;
       try {
-        await saveDirectoryHandle.getDirectoryHandle(trial_name);
+        existingTrialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name);
         trialDirExists = true;
       } catch (error) {
         // Directory doesn't exist, which is fine
@@ -351,6 +352,18 @@ function App() {
         );
         if (!userConfirmed) {
           return; // User chose not to override
+        }
+        
+        // If user confirmed override, remove any existing WebM files
+        if (existingTrialDirHandle) {
+          try {
+            // Try to remove any existing WebM file
+            await existingTrialDirHandle.removeEntry(`${trial_name}.webm`, { recursive: false });
+            console.log("Removed existing WebM file");
+          } catch (error) {
+            // File doesn't exist or couldn't be removed, which is fine
+            console.log("No existing WebM file to remove or couldn't remove it:", error);
+          }
         }
       }
 
@@ -369,11 +382,18 @@ function App() {
       await simDataWritable.write(JSON.stringify(simData, null, 2));
       await simDataWritable.close();
       
-      alert("Data saved successfully!");
-      
-      // If auto download is enabled and we have simulation data, download the WebM
+      // If auto download is enabled and we have simulation data, download the WebM first
       if (autoDownloadWebM && simData && videoPlayerRef.current) {
-        videoPlayerRef.current.downloadWebM();
+        try {
+          await videoPlayerRef.current.downloadWebM();
+          alert("Data and video saved successfully!");
+        } catch (error) {
+          console.error("Error downloading video:", error);
+          alert("Data saved successfully, but video download failed!");
+        }
+      } else {
+        // Show success message immediately if no auto-download
+        alert("Data saved successfully!");
       }
     } catch (error) {
       console.error("Error saving data:", error);
