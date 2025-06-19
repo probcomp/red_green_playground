@@ -9,6 +9,9 @@ function App() {
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, entityId: null });
   const [targetDirection, setTargetDirection] = useState(0); // Angle in radians
   const [directionInput, setDirectionInput] = useState("0"); // Direction input as string
+  const [isDraggingDirection, setIsDraggingDirection] = useState(false); // Track if dragging direction
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 }); // Current drag position
+  const [redDotPosition, setRedDotPosition] = useState({ x: 0, y: 0 }); // Red dot position during drag
   const [simData, setSimData] = useState(null); // State to hold the simulation data
   const videoPlayerRef = useRef(null); // Ref for VideoPlayer component
 
@@ -108,67 +111,93 @@ function App() {
     }
   };
 
-  const renderArrowForTarget = (target) => {
+  const renderDirectionPreview = (target) => {
     if (target.type !== "target") return null;
   
-    // Calculate the center of the target
-    const centerX = (target.x + target.width / 2) * px_scale + border_px;
-    const centerY = (worldHeight - (target.y + target.height / 2)) * px_scale + border_px;
-  
-    // Calculate the arrow endpoint
-    const arrowLength = ballSpeed * px_scale;
-    console.log("targetDirection: ", targetDirection);
-    const arrowEndX = centerX + arrowLength * Math.cos(targetDirection);
-    const arrowEndY = centerY - arrowLength * Math.sin(targetDirection);
-  
-    const handleArrowDragStop = (e, d) => {
-      const deltaX = d.x - centerX;
-      const deltaY = centerY - d.y;
+    // Calculate the exact center using the same logic as the Rnd component
+    const rndX = target.x * px_scale + border_px;
+    const rndY = (worldHeight - target.y - target.height) * px_scale + border_px;
+    const rndWidth = px_scale;
+    const rndHeight = px_scale;
     
-      // Calculate the precise angle in radians
+    // Center of the ball - exactly the same as the main Rnd component
+    const centerX = rndX + rndWidth / 2;
+    const centerY = rndY + rndHeight / 2;
+  
+  
+    // Line end point - exactly ballSpeed * px_scale pixels from center in the direction
+    const lineEndX = centerX + ballSpeed * px_scale * Math.cos(targetDirection);
+    const lineEndY = centerY - ballSpeed * px_scale * Math.sin(targetDirection);
+
+    const handleDrag = (e, d) => {
+      setDragPosition({ x: e.clientX, y: e.clientY });
+      setRedDotPosition({ x: d.x + px_scale / 2, y: d.y + px_scale / 2 }); // Center of the blue preview (25x25, so +12.5)
+    };
+
+    const handleDragStart = () => {
+      setIsDraggingDirection(true);
+    };
+
+    const handleDragStop = (e, d) => {
+      setIsDraggingDirection(false);
+      
+      // Use the Rnd drag position for angle calculation, adjusted for canvas border
+      const deltaX = (d.x + px_scale / 2) - centerX;
+      const deltaY = centerY - (d.y + px_scale / 2);
       const preciseAngle = Math.atan2(deltaY, deltaX); 
     
       updateTargetDirectionAndSpeed(preciseAngle * (180 / Math.PI));
-
-      console.log("preciseAngle: ", preciseAngle);
-    
-      // Update the entity's direction
+      
       const updatedEntity = {
         ...target,
-        direction: preciseAngle, // Use the precise angle in radians
+        direction: preciseAngle,
       };
       updateEntity(target.id, updatedEntity);
     };
   
     return (
       <React.Fragment>
-        {/* Line for the arrow */}
-        <div
+        {/* Line from ball center to end point */}
+        <svg
           style={{
             position: "absolute",
-            left: `${centerX}px`,
-            top: `${centerY}px`,
-            width: `${arrowLength}px`,
-            height: "2px",
-            backgroundColor: "red",
-            transformOrigin: "0 50%",
-            transform: `rotate(${-targetDirection}rad)`,
+            left: "0px",
+            top: "0px",
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 10
           }}
-        />
-        {/* Draggable endpoint of the arrow */}
+        >
+          <line
+            x1={centerX - 3}
+            y1={centerY - 3}
+            x2={lineEndX - 3}
+            y2={lineEndY - 3}
+            stroke="#ef4444"
+            strokeWidth="3"
+          />
+        </svg>
+        
+        {/* Blue preview at line end */}
         <Rnd
-          size={{ width: 10, height: 10 }}
+          size={{ width: px_scale, height: px_scale }}
           position={{
-            x: arrowEndX - 5,
-            y: arrowEndY - 5,
+            x: lineEndX - px_scale / 2,
+            y: lineEndY - px_scale / 2,
           }}
           bounds="parent"
-          onDragStop={handleArrowDragStop}
+          onDragStart={handleDragStart}
+          onDrag={handleDrag}
+          onDragStop={handleDragStop}
           enableResizing={false}
           style={{
-            backgroundColor: "red",
+            backgroundColor: "#3b82f6",
             borderRadius: "50%",
-            cursor: "pointer",
+            cursor: "grab",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+            zIndex: 20,
+            opacity: 0.6
           }}
         />
       </React.Fragment>
@@ -257,7 +286,7 @@ function App() {
                 setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
               }
             } else {
-              alert("Invalid file format. Ensure the JSON contains an array of entities.");
+              alert("Invalid file format. Ensure the JSON contains an array of entities!");
             }
           } catch (err) {
             alert("Failed to parse file. Ensure it's a valid JSON format.");
@@ -817,7 +846,7 @@ function App() {
               onContextMenu={(e) => handleContextMenu(e, entity.id)}
             />
 
-              {entity.type === "target" && renderArrowForTarget(entity)}
+              {entity.type === "target" && renderDirectionPreview(entity)}
               </React.Fragment>
             ))}
             {/* Context Menu */}
