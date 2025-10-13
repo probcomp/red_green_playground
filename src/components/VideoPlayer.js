@@ -10,8 +10,11 @@ const VideoPlayer = forwardRef(({
   worldHeight,
   mode = "regular",
   isAddingKeyHallucination = false,
+  setIsAddingKeyHallucination = () => {},
   selectedFrame = 0,
   setSelectedFrame = () => {},
+  keyHallucinations = [],
+  editingHallucinationIndex = null,
   onAddKeyHallucination = () => {}
 }, ref) => {
   const canvasRef = useRef(null);
@@ -22,12 +25,11 @@ const VideoPlayer = forwardRef(({
   const lastFrameTime = useRef(0);
   
   // Hallucination mode states
-  const [tempHallucinationData, setTempHallucinationData] = useState(null);
   const [hallucinationDirection, setHallucinationDirection] = useState(0);
   const [hallucinationDuration, setHallucinationDuration] = useState(1.0);
   const [hallucinationSpeed, setHallucinationSpeed] = useState(3.6);
-  const [isDraggingHallucDirection, setIsDraggingHallucDirection] = useState(false);
   const [hallucinationPosition, setHallucinationPosition] = useState(null);
+  const [isDraggingHallucDirection, setIsDraggingHallucDirection] = useState(false);
   const [disguiseHallucinations, setDisguiseHallucinations] = useState(false);
   const [liftUpTarget, setLiftUpTarget] = useState(false);
 
@@ -197,16 +199,16 @@ const VideoPlayer = forwardRef(({
 
           // Render target function for temp canvas
           const renderTargetTemp = (isLifted = false) => {
-            if (simData.step_data && simData.step_data[frameIndex]) {
-              const targetData = simData.step_data[frameIndex];
-              const targetSize = simData.target.size;
-              const radius = targetSize / 2;
-              const tx = targetData.x;
-              const ty = targetData.y;
+          if (simData.step_data && simData.step_data[frameIndex]) {
+            const targetData = simData.step_data[frameIndex];
+            const targetSize = simData.target.size;
+            const radius = targetSize / 2;
+            const tx = targetData.x;
+            const ty = targetData.y;
 
-              const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-              const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-              const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+            const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+            const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+            const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
               if (isLifted) {
                 let underOccluder = false;
@@ -224,7 +226,7 @@ const VideoPlayer = forwardRef(({
                   tempCtx.fillStyle = 'rgb(0, 0, 255)';
                 }
               } else {
-                tempCtx.fillStyle = 'rgb(0, 0, 255)';
+            tempCtx.fillStyle = 'rgb(0, 0, 255)';
               }
 
               tempCtx.beginPath();
@@ -275,9 +277,9 @@ const VideoPlayer = forwardRef(({
                 const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
                 tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
-                tempCtx.beginPath();
-                tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-                tempCtx.fill();
+            tempCtx.beginPath();
+            tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+            tempCtx.fill();
               }
             });
           }
@@ -298,7 +300,7 @@ const VideoPlayer = forwardRef(({
             const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
             
             tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
-          });
+          }); 
           
           // Render target after occluders if lifted
           if (liftUpTarget) {
@@ -331,7 +333,7 @@ const VideoPlayer = forwardRef(({
   // Expose downloadWebM function to parent component
   useImperativeHandle(ref, () => ({
     downloadWebM: downloadWebM
-  }), [simData, trial_name, fps, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, saveDirectoryHandle]);
+  }), [downloadWebM]);
 
   useEffect(() => {
     if (!simData) return;
@@ -386,17 +388,17 @@ const VideoPlayer = forwardRef(({
 
       // Render target if frame data exists (before occluders if not lifted)
       const renderTarget = (isLifted = false) => {
-        if (simData.step_data && simData.step_data[frameIndex]) {
-          const targetData = simData.step_data[frameIndex];
-          const targetSize = simData.target.size;
-          const radius = targetSize / 2;
-          const tx = targetData.x;
-          const ty = targetData.y;
+      if (simData.step_data && simData.step_data[frameIndex]) {
+        const targetData = simData.step_data[frameIndex];
+        const targetSize = simData.target.size;
+        const radius = targetSize / 2;
+        const tx = targetData.x;
+        const ty = targetData.y;
 
-          // Convert world coordinates to canvas coordinates
-          const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
-          const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
-          const canvasRadius = radius * (canvasWidth / simWorldWidth);
+        // Convert world coordinates to canvas coordinates
+        const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+        const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+        const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
           if (isLifted) {
             // When lifted, check if it's under an occluder
@@ -415,7 +417,7 @@ const VideoPlayer = forwardRef(({
               ctx.fillStyle = 'rgb(0, 0, 255)';
             }
           } else {
-            ctx.fillStyle = 'rgb(0, 0, 255)';
+        ctx.fillStyle = 'rgb(0, 0, 255)';
           }
           
           ctx.beginPath();
@@ -467,9 +469,9 @@ const VideoPlayer = forwardRef(({
             const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
             ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
-            ctx.beginPath();
-            ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-            ctx.fill();
+        ctx.beginPath();
+        ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+        ctx.fill();
           }
         });
       }
@@ -490,7 +492,7 @@ const VideoPlayer = forwardRef(({
         const canvasHeight_occluder = (occluder.height / simWorldHeight) * canvasHeight;
         
         ctx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
-      });
+      }); 
       
       // Render target after occluders if lifted
       if (liftUpTarget) {
@@ -568,6 +570,30 @@ const VideoPlayer = forwardRef(({
     };
   }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseHallucinations, liftUpTarget, isAddingKeyHallucination, hallucinationPosition, hallucinationSpeed, hallucinationDirection]);
 
+  // Pre-populate editing interface when editing a hallucination
+  useEffect(() => {
+    if (editingHallucinationIndex !== null && keyHallucinations[editingHallucinationIndex]) {
+      const halluc = keyHallucinations[editingHallucinationIndex];
+      setHallucinationPosition({ x: halluc.x, y: halluc.y });
+      setHallucinationDirection(halluc.direction);
+      setHallucinationSpeed(halluc.speed || 3.6);
+      setHallucinationDuration(halluc.duration);
+      setCurrentFrame(halluc.startFrame);
+    }
+  }, [editingHallucinationIndex, keyHallucinations]);
+
+  // Auto-create initial hallucination position when "Add Key Hallucination" is clicked
+  useEffect(() => {
+    if (isAddingKeyHallucination && !hallucinationPosition && editingHallucinationIndex === null) {
+      // Set initial position to center of scene
+      const centerX = simWorldWidth / 2;
+      const centerY = simWorldHeight / 2;
+      setHallucinationPosition({ x: centerX, y: centerY });
+      setHallucinationDirection(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddingKeyHallucination, editingHallucinationIndex]);
+
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
@@ -581,7 +607,7 @@ const VideoPlayer = forwardRef(({
   };
 
   const handleCanvasClick = (e) => {
-    if (!isAddingKeyHallucination || hallucinationPosition) return;
+    if (!isAddingKeyHallucination) return;
     
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -595,9 +621,8 @@ const VideoPlayer = forwardRef(({
     const worldX = (canvasX / canvasWidth) * simWorldWidth;
     const worldY = simWorldHeight - ((canvasY / canvasHeight) * simWorldHeight);
     
-    // Set hallucination position
+    // Update hallucination position
     setHallucinationPosition({ x: worldX, y: worldY });
-    setHallucinationDirection(0);
   };
 
   const handleConfirmKeyHallucination = () => {
@@ -656,29 +681,31 @@ const VideoPlayer = forwardRef(({
       gap: "16px",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     }}>
+      {/* Canvas Container with relative positioning for overlay */}
+      <div style={{ position: 'relative', width: `${displayWidth}px`, height: `${displayHeight}px` }}>
       <canvas
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        onClick={handleCanvasClick}
+          onClick={handleCanvasClick}
         style={{
           width: `${displayWidth}px`,
           height: `${displayHeight}px`,
           objectFit: 'contain',
-          border: isAddingKeyHallucination ? '3px solid #8b5cf6' : '3px solid #1e293b',
+            border: isAddingKeyHallucination ? '3px solid #8b5cf6' : '3px solid #1e293b',
           borderRadius: '0px',
           boxSizing: 'border-box',
           imageRendering: 'pixelated',
-          boxShadow: isAddingKeyHallucination 
-            ? "0 0 0 4px rgba(139, 92, 246, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.1)" 
-            : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-          backgroundColor: "#ffffff",
-          cursor: isAddingKeyHallucination ? 'crosshair' : 'default'
-        }}
-      />
-      
-      {/* Key Hallucination Direction Control - Overlay on canvas */}
-      {isAddingKeyHallucination && hallucinationPosition && (
+            boxShadow: isAddingKeyHallucination 
+              ? "0 0 0 4px rgba(139, 92, 246, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.1)" 
+              : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+            backgroundColor: "#ffffff",
+            cursor: isAddingKeyHallucination ? 'crosshair' : 'default'
+          }}
+        />
+        
+        {/* Key Hallucination Direction Control - Overlay on canvas */}
+        {isAddingKeyHallucination && hallucinationPosition && (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -715,6 +742,59 @@ const VideoPlayer = forwardRef(({
             })()}
           </svg>
           
+          {/* Draggable ball for position control */}
+          <Rnd
+            size={(() => {
+              const radius = simData.target.size / 2;
+              const px_scale = displayWidth / simWorldWidth;
+              const ballSizePx = radius * 2 * px_scale;
+              return { width: ballSizePx, height: ballSizePx };
+            })()}
+            position={(() => {
+              const radius = simData.target.size / 2;
+              const px_scale = displayWidth / simWorldWidth;
+              const centerX = (hallucinationPosition.x + radius) * px_scale;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
+              const ballSizePx = radius * 2 * px_scale;
+              return {
+                x: centerX - ballSizePx / 2,
+                y: centerY - ballSizePx / 2
+              };
+            })()}
+            bounds="parent"
+            onDragStop={(e, d) => {
+              const radius = simData.target.size / 2;
+              const px_scale = displayWidth / simWorldWidth;
+              const ballSizePx = radius * 2 * px_scale;
+              const centerX = d.x + ballSizePx / 2;
+              const centerY = d.y + ballSizePx / 2;
+              
+              // Convert display coordinates to world coordinates
+              const worldX = (centerX / px_scale) - radius;
+              const worldY = ((displayHeight - centerY) / (displayHeight / simWorldHeight)) - radius;
+              
+              setHallucinationPosition({ x: worldX, y: worldY });
+            }}
+            enableResizing={false}
+            style={{
+              backgroundColor: 'rgba(139, 92, 246, 0.5)',
+              borderRadius: '50%',
+              cursor: 'move',
+              boxShadow: '0 2px 8px rgba(139, 92, 246, 0.5)',
+              border: '2px solid #8b5cf6',
+              pointerEvents: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: '#ffffff'
+            }}
+          >
+            ⊕
+          </Rnd>
+          
+          {/* Draggable control point for direction */}
           <Rnd
             size={{ width: displayWidth / simWorldWidth, height: displayWidth / simWorldWidth }}
             position={(() => {
@@ -754,7 +834,8 @@ const VideoPlayer = forwardRef(({
             }}
           />
         </div>
-      )}
+        )}
+      </div>
       
       {/* Hallucination Configuration Controls */}
       {isAddingKeyHallucination && hallucinationPosition && (
@@ -772,7 +853,7 @@ const VideoPlayer = forwardRef(({
             fontWeight: '700',
             color: '#6b21a8'
           }}>
-            Configure Key Hallucination
+            {editingHallucinationIndex !== null ? 'Edit' : 'Configure'} Key Hallucination
           </h4>
           
           <div style={{ marginBottom: '12px' }}>
@@ -902,7 +983,7 @@ const VideoPlayer = forwardRef(({
                 cursor: 'pointer'
               }}
             >
-              ✓ Confirm
+              {editingHallucinationIndex !== null ? '✓ Update' : '✓ Confirm'}
             </button>
           </div>
         </div>

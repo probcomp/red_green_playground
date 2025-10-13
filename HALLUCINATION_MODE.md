@@ -27,12 +27,25 @@ Key Hallucinations are fully controllable hallucinated balls that you can add to
 3. **Click "Add Key Hallucination"**: This button appears in the purple Hallucination Controls panel
 4. **Select Frame**: Use the video player slider to navigate to the frame where you want the hallucination to start
 5. **Click on Canvas**: Click anywhere on the video player canvas to place the hallucination ball
-6. **Set Direction**: Drag the blue control point to set the direction and visually see the trajectory
+6. **Set Direction**: Drag the blue control point **directly on the video player canvas** to set the direction and visually see the trajectory
 7. **Configure Parameters**:
    - **Direction**: Fine-tune the direction in degrees (-180 to 180)
    - **Speed**: Set the hallucination speed in diameters/second (defaults to regular ball speed)
    - **Duration**: Set how long the hallucination lasts in seconds
 8. **Confirm**: Click "✓ Confirm" to add the hallucination
+9. **Auto-Simulation**: The simulation automatically re-runs after adding the hallucination
+
+#### How to Edit a Key Hallucination:
+
+1. **Find the Hallucination**: Locate it in the "Active Key Hallucinations" list in the Hallucination Controls panel
+2. **Click "Edit"**: Click the purple "Edit" button next to the hallucination you want to modify
+3. **Modify Settings**: The editing interface appears with the hallucination's current settings pre-loaded
+   - The video player will jump to the hallucination's starting frame
+   - The hallucination ball and direction control will appear on the canvas
+   - You can drag the direction control point to adjust the trajectory
+   - Modify direction, speed, and duration in the configuration panel
+4. **Update**: Click "✓ Update" to save your changes
+5. **Auto-Simulation**: The simulation automatically re-runs after updating the hallucination
 
 #### Key Hallucination Features:
 
@@ -43,7 +56,9 @@ Key Hallucinations are fully controllable hallucinated balls that you can add to
 - **Adjustable Speed**: Set custom speed for each key hallucination
 - **Visual Distinction**: Rendered in purple/violet color (unless disguised)
 - **Multiple Hallucinations**: You can add multiple key hallucinations to a single simulation
+- **Editable**: Click "Edit" on any key hallucination to modify its parameters
 - **Deletable**: Each key hallucination can be deleted from the list in the control panel
+- **Auto-Simulation**: Adding, editing, or deleting a key hallucination automatically re-runs the simulation
 
 ### 3. Random Hallucinations
 
@@ -136,6 +151,7 @@ When you load an `init_state_entities.json` file:
 - If the file contains hallucination data → switches to Hallucination Mode and loads the hallucination parameters
 - If the file doesn't contain hallucination data → switches to Regular Mode
 - Maintains backward compatibility with old format (arrays of entities only)
+- **Auto-Simulation**: The simulation automatically runs after successfully loading a file
 
 #### JSON Format
 
@@ -241,11 +257,14 @@ The "🗑️ Clear All" button now clears:
 2. **Low Probability**: Start with low random hallucination probability (e.g., 0.05) to avoid clutter
 3. **Visual Inspection**: Use the frame slider to scrub through and verify hallucinations appear correctly
 4. **Reproducibility**: Save your random seed if you want to reproduce the exact same random hallucinations
-5. **Interactive Setup**: Use drag-and-drop to visually set key hallucination directions
+5. **Interactive Setup**: Use drag-and-drop **directly on the video player canvas** to visually set key hallucination directions
 6. **Speed Matching**: Key hallucinations default to the regular ball's speed for consistency
 7. **Max Active Control**: Adjust max active hallucinations to prevent overwhelming the scene
 8. **Disguise Mode**: Use disguise mode when you want observers to focus on motion patterns rather than colors
 9. **Lift Up Feature**: Use when you need to verify the ground truth position during complex scenarios
+10. **Quick Iteration**: Auto-simulation makes it fast to add, edit, and test hallucinations
+11. **Edit Mode**: The currently edited hallucination is highlighted with a purple border in the list
+12. **Load and Go**: Loading a JSON file automatically runs the simulation - no need to click simulate
 
 ## Technical Details
 
@@ -260,9 +279,12 @@ The "🗑️ Clear All" button now clears:
 ### Frontend (React)
 
 - Mode switcher in top navigation with auto-switching on load
-- Interactive drag-based key hallucination creation
-- Real-time direction preview with visual control point
+- Interactive drag-based key hallucination creation **directly on the video player canvas**
+- Real-time direction preview with visual control point overlaid on canvas
 - Inline configuration panel with speed and duration controls
+- Edit existing key hallucinations with pre-populated settings
+- Visual highlighting of currently edited hallucination
+- Auto-simulation on add, edit, delete, and load operations
 - Real-time rendering of all balls with distinct colors or disguised
 - Frame-accurate playback and recording
 - Legend and visual controls below video player
@@ -294,13 +316,26 @@ A: The disguise button only appears when hallucinations exist in the simulation 
 **Q: Can't see target when occluded even with Lift Up enabled**  
 A: Make sure the Lift Up button shows "⬇️ Put Down". The target will appear semi-transparent (gray-blue) when under occluders
 
+**Q: The direction control appears in the wrong place on screen**  
+A: This was fixed in the latest version. The direction control now appears directly on the video player canvas where you clicked
+
+**Q: How do I edit a hallucination after adding it?**  
+A: Click the purple "Edit" button next to the hallucination in the Active Key Hallucinations list. The editing interface will appear with all settings pre-loaded
+
+**Q: Simulation doesn't update after I add a hallucination**  
+A: The simulation should run automatically. If it doesn't, click the "🚀 Simulate" button manually to refresh
+
+**Q: Can I change the position of an existing hallucination?**  
+A: Currently, you can edit the direction, speed, and duration of a hallucination, but not its starting position. To change the position, delete the hallucination and create a new one at the desired location
+
 ## Future Enhancements
 
 Potential improvements for future versions:
-- Edit existing key hallucinations after creation
+- Edit hallucination starting position (currently only direction, speed, and duration are editable)
 - Copy/paste hallucinations between simulations
 - Hallucination templates and presets
 - Different visual styles for hallucinations
 - Hallucination-specific physics parameters (different mass, friction, etc.)
 - Batch add multiple key hallucinations
 - Hallucination groups with synchronized behavior
+- Undo/redo for hallucination operations

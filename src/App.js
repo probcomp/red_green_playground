@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Rnd } from "react-rnd";
 import VideoPlayer from "./components/VideoPlayer";
 
@@ -27,7 +27,11 @@ function App() {
     maxActive: 5
   });
   const [isAddingKeyHallucination, setIsAddingKeyHallucination] = useState(false);
+  const [editingHallucinationIndex, setEditingHallucinationIndex] = useState(null);
   const [selectedFrame, setSelectedFrame] = useState(0);
+
+  // Track when to auto-simulate
+  const [shouldAutoSimulate, setShouldAutoSimulate] = useState(false);
 
   // Simulation parameters
   const [videoLength, setVideoLength] = useState(10); // Video length in seconds
@@ -58,6 +62,15 @@ function App() {
   const border_px = 2;
   const entityHeight = 1;
   const entityWidth = 1;
+
+  // Auto-simulate when keyHallucinations change (for add/edit/delete operations)
+  useEffect(() => {
+    if (shouldAutoSimulate && entities.length > 0) {
+      handleSimulate(true);
+      setShouldAutoSimulate(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyHallucinations, shouldAutoSimulate, entities]);
 
   const addEntity = (type) => {
     const existingTarget = entities.some((e) => e.type === "target");
@@ -243,7 +256,7 @@ function App() {
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, entityId });
   };
 
-  const handleSimulate = async () => {
+  const handleSimulate = async (autoRun = false) => {
     const requestBody = {
       entities,
       simulationParams: {
@@ -276,10 +289,16 @@ function App() {
         if (data.status === "success") {
           setSimData(data.sim_data); // Store the simulation data instead of viz_array
         } else {
-          console.error("Simulation error:", data.message);
+          if (!autoRun) {
+            console.error("Simulation error:", data.message);
+          }
         }
       })
-      .catch((error) => console.error("Error during simulation:", error));
+      .catch((error) => {
+        if (!autoRun) {
+          console.error("Error during simulation:", error);
+        }
+      });
   };
 
   const handleFileLoad = async (event) => {
@@ -360,6 +379,11 @@ function App() {
                   maxActive: 5
                 });
               }
+              
+              // Auto-simulate after loading
+              setTimeout(() => {
+                handleSimulate(true);
+              }, 100);
             } else {
               alert("Invalid file format. Ensure the JSON contains an array of entities!");
             }
@@ -1012,7 +1036,7 @@ function App() {
                           backgroundColor: 'white',
                           borderRadius: '6px',
                           marginBottom: '6px',
-                          border: '1px solid #e9d5ff',
+                          border: editingHallucinationIndex === index ? '2px solid #8b5cf6' : '1px solid #e9d5ff',
                           fontSize: '11px',
                           color: '#6b7280',
                           display: 'flex',
@@ -1021,25 +1045,51 @@ function App() {
                         }}
                       >
                         <span>
-                          Frame {halluc.startFrame} • {halluc.duration}s
+                          Frame {halluc.startFrame} • {halluc.duration}s • {halluc.speed?.toFixed(1) || '3.6'} d/s
                         </span>
-                        <button
-                          onClick={() => {
-                            setKeyHallucinations(keyHallucinations.filter((_, i) => i !== index));
-                          }}
-                          style={{
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '10px',
-                            cursor: 'pointer',
-                            fontWeight: '600'
-                          }}
-                        >
-                          Delete
-                        </button>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => {
+                              setEditingHallucinationIndex(index);
+                              setIsAddingKeyHallucination(true);
+                            }}
+                            style={{
+                              background: '#8b5cf6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setKeyHallucinations(keyHallucinations.filter((_, i) => i !== index));
+                              if (editingHallucinationIndex === index) {
+                                setEditingHallucinationIndex(null);
+                                setIsAddingKeyHallucination(false);
+                              }
+                              // Trigger auto-simulate after deleting
+                              setShouldAutoSimulate(true);
+                            }}
+                            style={{
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1346,11 +1396,25 @@ function App() {
                 worldHeight={worldHeight}
                 mode={mode}
                 isAddingKeyHallucination={isAddingKeyHallucination}
+                setIsAddingKeyHallucination={setIsAddingKeyHallucination}
                 selectedFrame={selectedFrame}
                 setSelectedFrame={setSelectedFrame}
+                keyHallucinations={keyHallucinations}
+                editingHallucinationIndex={editingHallucinationIndex}
                 onAddKeyHallucination={(hallucinationData) => {
-                  setKeyHallucinations([...keyHallucinations, hallucinationData]);
+                  if (editingHallucinationIndex !== null) {
+                    // Update existing hallucination
+                    const updated = [...keyHallucinations];
+                    updated[editingHallucinationIndex] = hallucinationData;
+                    setKeyHallucinations(updated);
+                    setEditingHallucinationIndex(null);
+                  } else {
+                    // Add new hallucination
+                    setKeyHallucinations([...keyHallucinations, hallucinationData]);
+                  }
                   setIsAddingKeyHallucination(false);
+                  // Trigger auto-simulate after state updates
+                  setShouldAutoSimulate(true);
                 }}
                 ref={videoPlayerRef}
               />
