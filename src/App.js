@@ -9,11 +9,25 @@ function App() {
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, entityId: null });
   const [targetDirection, setTargetDirection] = useState(0); // Angle in radians
   const [directionInput, setDirectionInput] = useState("0"); // Direction input as string
-  const [isDraggingDirection, setIsDraggingDirection] = useState(false); // Track if dragging direction
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 }); // Current drag position
-  const [redDotPosition, setRedDotPosition] = useState({ x: 0, y: 0 }); // Red dot position during drag
+  const [, setIsDraggingDirection] = useState(false); // Track if dragging direction
+  const [, setDragPosition] = useState({ x: 0, y: 0 }); // Current drag position
+  const [, setRedDotPosition] = useState({ x: 0, y: 0 }); // Red dot position during drag
   const [simData, setSimData] = useState(null); // State to hold the simulation data
   const videoPlayerRef = useRef(null); // Ref for VideoPlayer component
+
+  // Mode state (regular or hallucination)
+  const [mode, setMode] = useState("regular"); // "regular" or "hallucination"
+  
+  // Hallucination mode states
+  const [keyHallucinations, setKeyHallucinations] = useState([]); // Array of key hallucinations
+  const [randomHallucinationParams, setRandomHallucinationParams] = useState({
+    probability: 0.1,
+    seed: 42,
+    duration: 1.0,
+    maxActive: 5
+  });
+  const [isAddingKeyHallucination, setIsAddingKeyHallucination] = useState(false);
+  const [selectedFrame, setSelectedFrame] = useState(0);
 
   // Simulation parameters
   const [videoLength, setVideoLength] = useState(10); // Video length in seconds
@@ -213,6 +227,15 @@ function App() {
     setEntities([]);
     setSimData(null);
     setContextMenu({ visible: false, x: 0, y: 0, entityId: null });
+    // Clear hallucination data
+    setKeyHallucinations([]);
+    setRandomHallucinationParams({
+      probability: 0.1,
+      seed: 42,
+      duration: 1.0,
+      maxActive: 5
+    });
+    setIsAddingKeyHallucination(false);
   };
 
   const handleContextMenu = (e, entityId) => {
@@ -221,22 +244,32 @@ function App() {
   };
 
   const handleSimulate = async () => {
+    const requestBody = {
+      entities,
+      simulationParams: {
+        videoLength,
+        ballSpeed,
+        fps,
+        physicsStepsPerFrame,
+        res_multiplier,
+        timestep,
+        worldWidth,
+        worldHeight
+      },
+    };
+
+    // Add hallucination parameters if in hallucination mode
+    if (mode === "hallucination") {
+      requestBody.hallucinationParams = {
+        keyHallucinations,
+        randomHallucinationParams
+      };
+    }
+
     fetch("/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entities,
-        simulationParams: {
-          videoLength,
-          ballSpeed,
-          fps,
-          physicsStepsPerFrame,
-          res_multiplier,
-          timestep,
-          worldWidth,
-          worldHeight
-        },
-      }),
+      body: JSON.stringify(requestBody),
     })
       .then((response) => response.json())
       .then((data) => {
@@ -275,7 +308,34 @@ function App() {
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
-            const parsedEntities = JSON.parse(e.target.result);
+            const parsedData = JSON.parse(e.target.result);
+            
+            // Handle both old format (array) and new format (object with entities + hallucination data)
+            let parsedEntities;
+            let hasHallucinationData = false;
+            
+            if (Array.isArray(parsedData)) {
+              // Old format - just entities
+              parsedEntities = parsedData;
+            } else if (parsedData.entities) {
+              // New format - entities + optional hallucination data
+              parsedEntities = parsedData.entities;
+              
+              if (parsedData.hallucinationData) {
+                hasHallucinationData = true;
+                // Load hallucination data
+                if (parsedData.hallucinationData.keyHallucinations) {
+                  setKeyHallucinations(parsedData.hallucinationData.keyHallucinations);
+                }
+                if (parsedData.hallucinationData.randomHallucinationParams) {
+                  setRandomHallucinationParams(parsedData.hallucinationData.randomHallucinationParams);
+                }
+              }
+            } else {
+              alert("Invalid file format. Ensure the JSON contains entities!");
+              return;
+            }
+            
             if (Array.isArray(parsedEntities)) {
               setEntities(parsedEntities); // Reset entities state
   
@@ -284,6 +344,21 @@ function App() {
               if (targetEntity) {
                 setTargetDirection(targetEntity.direction || 0);
                 setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
+              }
+              
+              // Auto-switch mode based on hallucination data
+              if (hasHallucinationData && mode === "regular") {
+                setMode("hallucination");
+              } else if (!hasHallucinationData && mode === "hallucination") {
+                setMode("regular");
+                // Clear hallucination data when switching to regular mode
+                setKeyHallucinations([]);
+                setRandomHallucinationParams({
+                  probability: 0.1,
+                  seed: 42,
+                  duration: 1.0,
+                  maxActive: 5
+                });
               }
             } else {
               alert("Invalid file format. Ensure the JSON contains an array of entities!");
@@ -370,10 +445,22 @@ function App() {
       // Create trial directory
       const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
       
+      // Prepare init state data (entities + hallucination data if in hallucination mode)
+      const initStateData = {
+        entities: entities
+      };
+      
+      if (mode === "hallucination" && (keyHallucinations.length > 0 || randomHallucinationParams.probability > 0)) {
+        initStateData.hallucinationData = {
+          keyHallucinations,
+          randomHallucinationParams
+        };
+      }
+      
       // Save entities JSON file
       const entitiesFileHandle = await trialDirHandle.getFileHandle('init_state_entities.json', { create: true });
       const entitiesWritable = await entitiesFileHandle.createWritable();
-      await entitiesWritable.write(JSON.stringify(entities, null, 2));
+      await entitiesWritable.write(JSON.stringify(initStateData, null, 2));
       await entitiesWritable.close();
       
       // Save simulation data JSON file
@@ -402,8 +489,20 @@ function App() {
       if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
         alert("Permission denied. Falling back to download files.");
         
+        // Prepare init state data
+        const initStateData = {
+          entities: entities
+        };
+        
+        if (mode === "hallucination" && (keyHallucinations.length > 0 || randomHallucinationParams.probability > 0)) {
+          initStateData.hallucinationData = {
+            keyHallucinations,
+            randomHallucinationParams
+          };
+        }
+        
         // Download entities JSON
-        const entitiesBlob = new Blob([JSON.stringify(entities, null, 2)], { type: 'application/json' });
+        const entitiesBlob = new Blob([JSON.stringify(initStateData, null, 2)], { type: 'application/json' });
         const entitiesUrl = URL.createObjectURL(entitiesBlob);
         const entitiesLink = document.createElement('a');
         entitiesLink.href = entitiesUrl;
@@ -440,6 +539,74 @@ function App() {
       backgroundColor: "#f8fafc",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     }}>
+      {/* Top Bar with Mode Switcher */}
+      <div style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        padding: "12px 24px",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+        borderBottom: "2px solid #e2e8f0",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)"
+      }}>
+        <div style={{
+          display: "flex",
+          gap: "8px",
+          alignItems: "center"
+        }}>
+          <span style={{
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#64748b",
+            marginRight: "8px"
+          }}>
+            Mode:
+          </span>
+          <button
+            onClick={() => setMode("regular")}
+            style={{
+              background: mode === "regular" 
+                ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" 
+                : "linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)",
+              color: mode === "regular" ? "white" : "#6b7280",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: mode === "regular" 
+                ? "0 2px 8px rgba(59, 130, 246, 0.3)" 
+                : "0 2px 4px rgba(0, 0, 0, 0.1)"
+            }}
+          >
+            Regular Mode
+          </button>
+          <button
+            onClick={() => setMode("hallucination")}
+            style={{
+              background: mode === "hallucination" 
+                ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" 
+                : "linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)",
+              color: mode === "hallucination" ? "white" : "#6b7280",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: mode === "hallucination" 
+                ? "0 2px 8px rgba(139, 92, 246, 0.3)" 
+                : "0 2px 4px rgba(0, 0, 0, 0.1)"
+            }}
+          >
+            Hallucination Mode
+          </button>
+        </div>
+      </div>
+      
       {/* Middle Section - Canvas and Video Player */}
       <div style={{ 
         flex: 1, 
@@ -772,6 +939,261 @@ function App() {
               )}
             </div>
           </div>
+
+          {/* Hallucination Controls - Only show in hallucination mode */}
+          {mode === "hallucination" && (
+            <div style={{ 
+              background: "linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)", 
+              padding: '24px', 
+              borderRadius: '12px', 
+              border: '2px solid #d8b4fe',
+              boxShadow: "0 4px 6px -1px rgba(139, 92, 246, 0.2), 0 2px 4px -1px rgba(139, 92, 246, 0.1)"
+            }}>
+              <h3 style={{ 
+                margin: '0 0 20px 0', 
+                fontSize: '18px', 
+                fontWeight: '700', 
+                color: '#6b21a8',
+                letterSpacing: '-0.025em'
+              }}>
+                Hallucination Controls
+              </h3>
+              
+              {/* Key Hallucination Section */}
+              <div style={{ marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid #e9d5ff' }}>
+                <h4 style={{ 
+                  margin: '0 0 12px 0', 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: '#7c3aed'
+                }}>
+                  Key Hallucination
+                </h4>
+                
+                <button
+                  onClick={() => setIsAddingKeyHallucination(!isAddingKeyHallucination)}
+                  disabled={!simData}
+                  style={{
+                    width: '100%',
+                    background: isAddingKeyHallucination 
+                      ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
+                      : "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                    color: "white",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    cursor: simData ? "pointer" : "not-allowed",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    marginBottom: "12px",
+                    opacity: simData ? 1 : 0.5
+                  }}
+                >
+                  {isAddingKeyHallucination ? "❌ Cancel Adding" : "➕ Add Key Hallucination"}
+                </button>
+                
+                {keyHallucinations.length > 0 && (
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#7c3aed', 
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>
+                      Active Key Hallucinations: {keyHallucinations.length}
+                    </div>
+                    {keyHallucinations.map((halluc, index) => (
+                      <div 
+                        key={index}
+                        style={{
+                          padding: '8px 10px',
+                          backgroundColor: 'white',
+                          borderRadius: '6px',
+                          marginBottom: '6px',
+                          border: '1px solid #e9d5ff',
+                          fontSize: '11px',
+                          color: '#6b7280',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <span>
+                          Frame {halluc.startFrame} • {halluc.duration}s
+                        </span>
+                        <button
+                          onClick={() => {
+                            setKeyHallucinations(keyHallucinations.filter((_, i) => i !== index));
+                          }}
+                          style={{
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Random Hallucination Parameters */}
+              <div>
+                <h4 style={{ 
+                  margin: '0 0 12px 0', 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: '#7c3aed'
+                }}>
+                  Random Hallucinations
+                </h4>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#6b21a8', 
+                    marginBottom: '6px'
+                  }}>
+                    Spawn Probability (per frame)
+                  </label>
+                  <input
+                    type="number"
+                    value={randomHallucinationParams.probability}
+                    onChange={(e) => setRandomHallucinationParams({
+                      ...randomHallucinationParams,
+                      probability: parseFloat(e.target.value)
+                    })}
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '2px solid #e9d5ff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#6b21a8', 
+                    marginBottom: '6px'
+                  }}>
+                    Random Seed
+                  </label>
+                  <input
+                    type="number"
+                    value={randomHallucinationParams.seed}
+                    onChange={(e) => setRandomHallucinationParams({
+                      ...randomHallucinationParams,
+                      seed: parseInt(e.target.value)
+                    })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '2px solid #e9d5ff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#6b21a8', 
+                    marginBottom: '6px'
+                  }}>
+                    Duration (seconds)
+                  </label>
+                  <input
+                    type="number"
+                    value={randomHallucinationParams.duration}
+                    onChange={(e) => setRandomHallucinationParams({
+                      ...randomHallucinationParams,
+                      duration: parseFloat(e.target.value)
+                    })}
+                    min="0.1"
+                    step="0.1"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '2px solid #e9d5ff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '0' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#6b21a8', 
+                    marginBottom: '6px'
+                  }}>
+                    Max Active Hallucinations
+                  </label>
+                  <input
+                    type="number"
+                    value={randomHallucinationParams.maxActive}
+                    onChange={(e) => setRandomHallucinationParams({
+                      ...randomHallucinationParams,
+                      maxActive: parseInt(e.target.value)
+                    })}
+                    min="1"
+                    step="1"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '2px solid #e9d5ff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Side - Canvas and Video Player */}
@@ -922,6 +1344,14 @@ function App() {
                 saveDirectoryHandle={saveDirectoryHandle}
                 worldWidth={worldWidth}
                 worldHeight={worldHeight}
+                mode={mode}
+                isAddingKeyHallucination={isAddingKeyHallucination}
+                selectedFrame={selectedFrame}
+                setSelectedFrame={setSelectedFrame}
+                onAddKeyHallucination={(hallucinationData) => {
+                  setKeyHallucinations([...keyHallucinations, hallucinationData]);
+                  setIsAddingKeyHallucination(false);
+                }}
                 ref={videoPlayerRef}
               />
             ) : (

@@ -1,12 +1,35 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { Rnd } from "react-rnd";
 
-const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle, worldWidth, worldHeight }, ref) => {
+const VideoPlayer = forwardRef(({ 
+  simData, 
+  fps, 
+  trial_name, 
+  saveDirectoryHandle, 
+  worldWidth, 
+  worldHeight,
+  mode = "regular",
+  isAddingKeyHallucination = false,
+  selectedFrame = 0,
+  setSelectedFrame = () => {},
+  onAddKeyHallucination = () => {}
+}, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const animationRef = useRef(null);
   const lastFrameTime = useRef(0);
+  
+  // Hallucination mode states
+  const [tempHallucinationData, setTempHallucinationData] = useState(null);
+  const [hallucinationDirection, setHallucinationDirection] = useState(0);
+  const [hallucinationDuration, setHallucinationDuration] = useState(1.0);
+  const [hallucinationSpeed, setHallucinationSpeed] = useState(3.6);
+  const [isDraggingHallucDirection, setIsDraggingHallucDirection] = useState(false);
+  const [hallucinationPosition, setHallucinationPosition] = useState(null);
+  const [disguiseHallucinations, setDisguiseHallucinations] = useState(false);
+  const [liftUpTarget, setLiftUpTarget] = useState(false);
 
   // Extract dimensions from simData
   const numFrames = simData ? simData.num_frames : 0;
@@ -172,26 +195,99 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
             tempCtx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
           }); 
 
-          // Render target if frame data exists
-          if (simData.step_data && simData.step_data[frameIndex]) {
-            const targetData = simData.step_data[frameIndex];
-            const targetSize = simData.target.size;
-            const radius = targetSize / 2;
-            const tx = targetData.x;
-            const ty = targetData.y;
+          // Render target function for temp canvas
+          const renderTargetTemp = (isLifted = false) => {
+            if (simData.step_data && simData.step_data[frameIndex]) {
+              const targetData = simData.step_data[frameIndex];
+              const targetSize = simData.target.size;
+              const radius = targetSize / 2;
+              const tx = targetData.x;
+              const ty = targetData.y;
 
-            // Convert world coordinates to temp canvas coordinates with scale factor
-            const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-            const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-            const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+              const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+              const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+              const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-            tempCtx.fillStyle = 'rgb(0, 0, 255)';
-            tempCtx.beginPath();
-            tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-            tempCtx.fill();
+              if (isLifted) {
+                let underOccluder = false;
+                for (const occluder of simData.occluders) {
+                  if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                      ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                    underOccluder = true;
+                    break;
+                  }
+                }
+                
+                if (underOccluder) {
+                  tempCtx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                } else {
+                  tempCtx.fillStyle = 'rgb(0, 0, 255)';
+                }
+              } else {
+                tempCtx.fillStyle = 'rgb(0, 0, 255)';
+              }
+
+              tempCtx.beginPath();
+              tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+              tempCtx.fill();
+              
+              if (liftUpTarget) {
+                tempCtx.strokeStyle = '#000';
+                tempCtx.lineWidth = 2 * scaleFactor;
+                tempCtx.stroke();
+              }
+            }
+          };
+
+          // Render hallucinations (key and random)
+          if (simData.key_hallucinations) {
+            simData.key_hallucinations.forEach(halluc => {
+              if (halluc.step_data && halluc.step_data[frameIndex]) {
+                const halData = halluc.step_data[frameIndex];
+                const targetSize = simData.target.size;
+                const radius = targetSize / 2;
+                const tx = halData.x;
+                const ty = halData.y;
+
+                const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+                tempCtx.beginPath();
+                tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                tempCtx.fill();
+              }
+            });
           }
 
-          // Render occluders last
+          if (simData.random_hallucinations) {
+            simData.random_hallucinations.forEach(halluc => {
+              if (halluc.step_data && halluc.step_data[frameIndex]) {
+                const halData = halluc.step_data[frameIndex];
+                const targetSize = simData.target.size;
+                const radius = targetSize / 2;
+                const tx = halData.x;
+                const ty = halData.y;
+
+                const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+                tempCtx.beginPath();
+                tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                tempCtx.fill();
+              }
+            });
+          }
+
+          // Render target before occluders if not lifted
+          if (!liftUpTarget) {
+            renderTargetTemp(false);
+          }
+
+          // Render occluders
           simData.occluders.forEach(occluder => {
             tempCtx.fillStyle = 'rgb(128, 128, 128)';
             
@@ -202,7 +298,12 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
             const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
             
             tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
-          }); 
+          });
+          
+          // Render target after occluders if lifted
+          if (liftUpTarget) {
+            renderTargetTemp(true);
+          }
         };
 
         // Render all frames in background with timing (doesn't affect visible canvas)
@@ -283,26 +384,102 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
         ctx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
       }); 
 
-      // Render target if frame data exists
-      if (simData.step_data && simData.step_data[frameIndex]) {
-        const targetData = simData.step_data[frameIndex];
-        const targetSize = simData.target.size;
-        const radius = targetSize / 2;
-        const tx = targetData.x;
-        const ty = targetData.y;
+      // Render target if frame data exists (before occluders if not lifted)
+      const renderTarget = (isLifted = false) => {
+        if (simData.step_data && simData.step_data[frameIndex]) {
+          const targetData = simData.step_data[frameIndex];
+          const targetSize = simData.target.size;
+          const radius = targetSize / 2;
+          const tx = targetData.x;
+          const ty = targetData.y;
 
-        // Convert world coordinates to canvas coordinates
-        const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
-        const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
-        const canvasRadius = radius * (canvasWidth / simWorldWidth);
+          // Convert world coordinates to canvas coordinates
+          const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+          const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+          const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-        ctx.fillStyle = 'rgb(0, 0, 255)';
-        ctx.beginPath();
-        ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-        ctx.fill();
+          if (isLifted) {
+            // When lifted, check if it's under an occluder
+            let underOccluder = false;
+            for (const occluder of simData.occluders) {
+              if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                  ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                underOccluder = true;
+                break;
+              }
+            }
+            
+            if (underOccluder) {
+              ctx.fillStyle = 'rgba(0, 0, 255, 0.3)'; // Semi-transparent gray-blue when occluded
+            } else {
+              ctx.fillStyle = 'rgb(0, 0, 255)';
+            }
+          } else {
+            ctx.fillStyle = 'rgb(0, 0, 255)';
+          }
+          
+          ctx.beginPath();
+          ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Add border if lifted
+          if (liftUpTarget) {
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+      };
+
+      // Render hallucinations (key and random) before occluders
+      if (simData.key_hallucinations) {
+        simData.key_hallucinations.forEach(halluc => {
+          if (halluc.step_data && halluc.step_data[frameIndex]) {
+            const halData = halluc.step_data[frameIndex];
+            const targetSize = simData.target.size;
+            const radius = targetSize / 2;
+            const tx = halData.x;
+            const ty = halData.y;
+
+            const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+            const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+            const canvasRadius = radius * (canvasWidth / simWorldWidth);
+
+            ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        });
       }
 
-      // Render occluders last
+      if (simData.random_hallucinations) {
+        simData.random_hallucinations.forEach(halluc => {
+          if (halluc.step_data && halluc.step_data[frameIndex]) {
+            const halData = halluc.step_data[frameIndex];
+            const targetSize = simData.target.size;
+            const radius = targetSize / 2;
+            const tx = halData.x;
+            const ty = halData.y;
+
+            const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+            const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+            const canvasRadius = radius * (canvasWidth / simWorldWidth);
+
+            ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        });
+      }
+
+      // Render target before occluders if not lifted
+      if (!liftUpTarget) {
+        renderTarget(false);
+      }
+
+      // Render occluders
       simData.occluders.forEach(occluder => {
         ctx.fillStyle = 'rgb(128, 128, 128)';
         
@@ -313,7 +490,47 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
         const canvasHeight_occluder = (occluder.height / simWorldHeight) * canvasHeight;
         
         ctx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
-      }); 
+      });
+      
+      // Render target after occluders if lifted
+      if (liftUpTarget) {
+        renderTarget(true);
+      }
+      
+      // Render hallucination preview if setting up key hallucination
+      if (isAddingKeyHallucination && hallucinationPosition) {
+        const radius = simData.target.size / 2;
+        const px_scale = canvasWidth / simWorldWidth;
+        
+        // Convert world to canvas coordinates for the ball center
+        const centerX = (hallucinationPosition.x + radius) * px_scale;
+        const centerY = canvasHeight - ((hallucinationPosition.y + radius) * (canvasHeight / simWorldHeight));
+        
+        // Draw the hallucination ball
+        ctx.fillStyle = 'rgba(138, 43, 226, 0.6)';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * px_scale, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw direction line
+        const lineEndX = centerX + hallucinationSpeed * px_scale * Math.cos(hallucinationDirection);
+        const lineEndY = centerY - hallucinationSpeed * px_scale * Math.sin(hallucinationDirection);
+        
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(lineEndX, lineEndY);
+        ctx.stroke();
+        
+        // Draw direction control point
+        ctx.fillStyle = '#3b82f6';
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(lineEndX, lineEndY, px_scale / 2, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
     };
 
     const animate = (timestamp) => {
@@ -349,7 +566,7 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps]);
+  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseHallucinations, liftUpTarget, isAddingKeyHallucination, hallucinationPosition, hallucinationSpeed, hallucinationDirection]);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -358,6 +575,51 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
   const handleSeek = (e) => {
     const seekPosition = parseInt(e.target.value);
     setCurrentFrame(seekPosition);
+    if (mode === "hallucination") {
+      setSelectedFrame(seekPosition);
+    }
+  };
+
+  const handleCanvasClick = (e) => {
+    if (!isAddingKeyHallucination || hallucinationPosition) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvasWidth / rect.width;
+    const scaleY = canvasHeight / rect.height;
+    
+    const canvasX = (e.clientX - rect.left) * scaleX;
+    const canvasY = (e.clientY - rect.top) * scaleY;
+    
+    // Convert canvas coordinates to world coordinates
+    const worldX = (canvasX / canvasWidth) * simWorldWidth;
+    const worldY = simWorldHeight - ((canvasY / canvasHeight) * simWorldHeight);
+    
+    // Set hallucination position
+    setHallucinationPosition({ x: worldX, y: worldY });
+    setHallucinationDirection(0);
+  };
+
+  const handleConfirmKeyHallucination = () => {
+    if (!hallucinationPosition) return;
+    
+    const hallucinationData = {
+      startFrame: currentFrame,
+      x: hallucinationPosition.x,
+      y: hallucinationPosition.y,
+      direction: hallucinationDirection,
+      duration: hallucinationDuration,
+      speed: hallucinationSpeed
+    };
+    
+    onAddKeyHallucination(hallucinationData);
+    setHallucinationPosition(null);
+    setHallucinationDirection(0);
+  };
+
+  const handleCancelKeyHallucination = () => {
+    setHallucinationPosition(null);
+    setHallucinationDirection(0);
   }; 
 
   if (!simData) {
@@ -398,18 +660,254 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
+        onClick={handleCanvasClick}
         style={{
           width: `${displayWidth}px`,
           height: `${displayHeight}px`,
           objectFit: 'contain',
-          border: '3px solid #1e293b',
+          border: isAddingKeyHallucination ? '3px solid #8b5cf6' : '3px solid #1e293b',
           borderRadius: '0px',
           boxSizing: 'border-box',
           imageRendering: 'pixelated',
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-          backgroundColor: "#ffffff"
+          boxShadow: isAddingKeyHallucination 
+            ? "0 0 0 4px rgba(139, 92, 246, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.1)" 
+            : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          backgroundColor: "#ffffff",
+          cursor: isAddingKeyHallucination ? 'crosshair' : 'default'
         }}
       />
+      
+      {/* Key Hallucination Direction Control - Overlay on canvas */}
+      {isAddingKeyHallucination && hallucinationPosition && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: `${displayWidth}px`,
+          height: `${displayHeight}px`,
+          pointerEvents: 'none',
+          zIndex: 100
+        }}>
+          <svg style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none'
+          }}>
+            {(() => {
+              const radius = simData.target.size / 2;
+              const px_scale = displayWidth / simWorldWidth;
+              const centerX = (hallucinationPosition.x + radius) * px_scale;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
+              const lineEndX = centerX + hallucinationSpeed * px_scale * Math.cos(hallucinationDirection);
+              const lineEndY = centerY - hallucinationSpeed * px_scale * Math.sin(hallucinationDirection);
+              
+              return (
+                <line
+                  x1={centerX}
+                  y1={centerY}
+                  x2={lineEndX}
+                  y2={lineEndY}
+                  stroke="#ef4444"
+                  strokeWidth="3"
+                />
+              );
+            })()}
+          </svg>
+          
+          <Rnd
+            size={{ width: displayWidth / simWorldWidth, height: displayWidth / simWorldWidth }}
+            position={(() => {
+              const radius = simData.target.size / 2;
+              const px_scale = displayWidth / simWorldWidth;
+              const centerX = (hallucinationPosition.x + radius) * px_scale;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
+              const lineEndX = centerX + hallucinationSpeed * px_scale * Math.cos(hallucinationDirection);
+              const lineEndY = centerY - hallucinationSpeed * px_scale * Math.sin(hallucinationDirection);
+              return {
+                x: lineEndX - (displayWidth / simWorldWidth) / 2,
+                y: lineEndY - (displayWidth / simWorldWidth) / 2
+              };
+            })()}
+            bounds="parent"
+            onDragStart={() => setIsDraggingHallucDirection(true)}
+            onDragStop={(e, d) => {
+              setIsDraggingHallucDirection(false);
+              const radius = simData.target.size / 2;
+              const px_scale = displayWidth / simWorldWidth;
+              const centerX = (hallucinationPosition.x + radius) * px_scale;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
+              
+              const deltaX = (d.x + (displayWidth / simWorldWidth) / 2) - centerX;
+              const deltaY = centerY - (d.y + (displayWidth / simWorldWidth) / 2);
+              const newDirection = Math.atan2(deltaY, deltaX);
+              setHallucinationDirection(newDirection);
+            }}
+            enableResizing={false}
+            style={{
+              backgroundColor: '#3b82f6',
+              borderRadius: '50%',
+              cursor: 'grab',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+              opacity: 0.6,
+              pointerEvents: 'auto'
+            }}
+          />
+        </div>
+      )}
+      
+      {/* Hallucination Configuration Controls */}
+      {isAddingKeyHallucination && hallucinationPosition && (
+        <div style={{
+          background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)',
+          padding: '16px',
+          borderRadius: '12px',
+          border: '2px solid #d8b4fe',
+          boxShadow: '0 4px 6px rgba(139, 92, 246, 0.2)',
+          marginTop: '12px'
+        }}>
+          <h4 style={{
+            margin: '0 0 12px 0',
+            fontSize: '14px',
+            fontWeight: '700',
+            color: '#6b21a8'
+          }}>
+            Configure Key Hallucination
+          </h4>
+          
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#7c3aed',
+              marginBottom: '4px'
+            }}>
+              Frame: {currentFrame} | Position: ({hallucinationPosition.x.toFixed(2)}, {hallucinationPosition.y.toFixed(2)})
+            </label>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '11px',
+                fontWeight: '600',
+                color: '#6b21a8',
+                marginBottom: '4px'
+              }}>
+                Direction (°)
+              </label>
+              <input
+                type="number"
+                value={(hallucinationDirection * 180 / Math.PI).toFixed(1)}
+                onChange={(e) => setHallucinationDirection(parseFloat(e.target.value || 0) * Math.PI / 180)}
+                min="-180"
+                max="180"
+                step="1"
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  border: '2px solid #e9d5ff',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '11px',
+                fontWeight: '600',
+                color: '#6b21a8',
+                marginBottom: '4px'
+              }}>
+                Speed (d/s)
+              </label>
+              <input
+                type="number"
+                value={hallucinationSpeed}
+                onChange={(e) => setHallucinationSpeed(parseFloat(e.target.value || 0))}
+                min="0.1"
+                step="0.1"
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  border: '2px solid #e9d5ff',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '11px',
+                fontWeight: '600',
+                color: '#6b21a8',
+                marginBottom: '4px'
+              }}>
+                Duration (s)
+              </label>
+              <input
+                type="number"
+                value={hallucinationDuration}
+                onChange={(e) => setHallucinationDuration(parseFloat(e.target.value || 0))}
+                min="0.1"
+                step="0.1"
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  border: '2px solid #e9d5ff',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleCancelKeyHallucination}
+              style={{
+                flex: 1,
+                padding: '8px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                backgroundColor: 'white',
+                color: '#374151',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmKeyHallucination}
+              style={{
+                flex: 1,
+                padding: '8px',
+                border: 'none',
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              ✓ Confirm
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div style={{ 
         display: "flex", 
         flexDirection: "column", 
@@ -481,6 +979,106 @@ const VideoPlayer = forwardRef(({ simData, fps, trial_name, saveDirectoryHandle,
             }}
           >
             {isRecording ? "🔄 Recording..." : "📥 Download WebM"}
+          </button>
+        </div>
+        
+        {/* Legend and Control Buttons */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px',
+          marginBottom: '6px',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          {/* Legend */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            padding: '8px 12px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '6px',
+            border: '1px solid #e5e7eb',
+            flex: 1,
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: 'rgb(0, 0, 255)',
+                border: liftUpTarget ? '2px solid #000' : 'none'
+              }} />
+              <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>Target</span>
+            </div>
+            {mode === "hallucination" && simData && (simData.key_hallucinations?.length > 0 || simData.random_hallucinations?.length > 0) && !disguiseHallucinations && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgb(138, 43, 226)'
+                  }} />
+                  <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>Key</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgb(255, 105, 180)'
+                  }} />
+                  <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>Random</span>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Disguise/Reveal Button */}
+          {mode === "hallucination" && simData && (simData.key_hallucinations?.length > 0 || simData.random_hallucinations?.length > 0) && (
+            <button
+              onClick={() => setDisguiseHallucinations(!disguiseHallucinations)}
+              style={{
+                background: disguiseHallucinations 
+                  ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                  : "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                color: "white",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "11px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {disguiseHallucinations ? "👁️ Reveal" : "🎭 Disguise"}
+            </button>
+          )}
+          
+          {/* Lift Up/Put Down Target Button */}
+          <button
+            onClick={() => setLiftUpTarget(!liftUpTarget)}
+            style={{
+              background: liftUpTarget
+                ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+              color: "white",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "11px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {liftUpTarget ? "⬇️ Put Down" : "⬆️ Lift Up"}
           </button>
         </div>
         
