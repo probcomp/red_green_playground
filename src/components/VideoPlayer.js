@@ -499,40 +499,7 @@ const VideoPlayer = forwardRef(({
         renderTarget(true);
       }
       
-      // Render hallucination preview if setting up key hallucination
-      if (isAddingKeyHallucination && hallucinationPosition) {
-        const radius = simData.target.size / 2;
-        const px_scale = canvasWidth / simWorldWidth;
-        
-        // Convert world to canvas coordinates for the ball center
-        const centerX = (hallucinationPosition.x + radius) * px_scale;
-        const centerY = canvasHeight - ((hallucinationPosition.y + radius) * (canvasHeight / simWorldHeight));
-        
-        // Draw the hallucination ball
-        ctx.fillStyle = 'rgba(138, 43, 226, 0.6)';
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius * px_scale, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        // Draw direction line
-        const lineEndX = centerX + hallucinationSpeed * px_scale * Math.cos(hallucinationDirection);
-        const lineEndY = centerY - hallucinationSpeed * px_scale * Math.sin(hallucinationDirection);
-        
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.lineTo(lineEndX, lineEndY);
-        ctx.stroke();
-        
-        // Draw direction control point
-        ctx.fillStyle = '#3b82f6';
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.arc(lineEndX, lineEndY, px_scale / 2, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-      }
+      // Note: Hallucination preview is now rendered via Rnd overlay components (not on canvas)
     };
 
     const animate = (timestamp) => {
@@ -568,7 +535,7 @@ const VideoPlayer = forwardRef(({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseHallucinations, liftUpTarget, isAddingKeyHallucination, hallucinationPosition, hallucinationSpeed, hallucinationDirection]);
+  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseHallucinations, liftUpTarget]);
 
   // Pre-populate editing interface when editing a hallucination
   useEffect(() => {
@@ -1159,7 +1126,7 @@ const VideoPlayer = forwardRef(({
               whiteSpace: 'nowrap'
             }}
           >
-            {liftUpTarget ? "⬇️ Put Down" : "⬆️ Lift Up"}
+            {liftUpTarget ? "⬇️ Occlude" : "⬆️ Un-occlude"}
           </button>
         </div>
         

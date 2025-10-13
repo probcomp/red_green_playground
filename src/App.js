@@ -381,9 +381,7 @@ function App() {
               }
               
               // Auto-simulate after loading
-              setTimeout(() => {
-                handleSimulate(true);
-              }, 100);
+              setShouldAutoSimulate(true);
             } else {
               alert("Invalid file format. Ensure the JSON contains an array of entities!");
             }
@@ -402,7 +400,7 @@ function App() {
   const handleSetSaveDirectory = async () => {
     // Check if File System Access API is supported
     if (!('showDirectoryPicker' in window)) {
-      alert("File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.");
+      alert("Your browser doesn't support directory selection. When you save, files will be downloaded to your default downloads folder instead.");
       return;
     }
 
@@ -422,13 +420,64 @@ function App() {
   };
 
   const handleSavedata = async () => {
-    if (!saveDirectoryHandle) {
-      alert("Please set a save directory first!");
+    if (!simData) {
+      alert("No simulation data available. Please run a simulation first!");
       return;
     }
 
-    if (!simData) {
-      alert("No simulation data available. Please run a simulation first!");
+    // If no directory handle is set (e.g., Firefox), use download fallback
+    if (!saveDirectoryHandle) {
+      try {
+        // Prepare init state data
+        const initStateData = {
+          entities: entities
+        };
+        
+        if (mode === "hallucination" && (keyHallucinations.length > 0 || randomHallucinationParams.probability > 0)) {
+          initStateData.hallucinationData = {
+            keyHallucinations,
+            randomHallucinationParams
+          };
+        }
+        
+        // Download entities JSON
+        const entitiesBlob = new Blob([JSON.stringify(initStateData, null, 2)], { type: 'application/json' });
+        const entitiesUrl = URL.createObjectURL(entitiesBlob);
+        const entitiesLink = document.createElement('a');
+        entitiesLink.href = entitiesUrl;
+        entitiesLink.download = `${trial_name}_init_state_entities.json`;
+        document.body.appendChild(entitiesLink);
+        entitiesLink.click();
+        document.body.removeChild(entitiesLink);
+        URL.revokeObjectURL(entitiesUrl);
+        
+        // Download simulation data JSON
+        const simDataBlob = new Blob([JSON.stringify(simData, null, 2)], { type: 'application/json' });
+        const simDataUrl = URL.createObjectURL(simDataBlob);
+        const simDataLink = document.createElement('a');
+        simDataLink.href = simDataUrl;
+        simDataLink.download = `${trial_name}_simulation_data.json`;
+        document.body.appendChild(simDataLink);
+        simDataLink.click();
+        document.body.removeChild(simDataLink);
+        URL.revokeObjectURL(simDataUrl);
+        
+        // If auto download is enabled, download the WebM
+        if (autoDownloadWebM && videoPlayerRef.current) {
+          try {
+            await videoPlayerRef.current.downloadWebM();
+            alert("Files downloaded successfully!");
+          } catch (error) {
+            console.error("Error downloading video:", error);
+            alert("Data files downloaded successfully, but video download failed!");
+          }
+        } else {
+          alert("Files downloaded successfully!");
+        }
+      } catch (error) {
+        console.error("Error downloading files:", error);
+        alert("An error occurred while downloading files: " + error.message);
+      }
       return;
     }
 
