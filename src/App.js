@@ -256,7 +256,78 @@ function App() {
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, entityId });
   };
 
+  // Validation function to check if a ball (circle) overlaps with a barrier (rectangle)
+  const checkCircleRectangleCollision = (circleX, circleCenterY, circleRadius, rectX, rectY, rectWidth, rectHeight) => {
+    // Find the closest point on the rectangle to the circle's center
+    const closestX = Math.max(rectX, Math.min(circleX, rectX + rectWidth));
+    const closestY = Math.max(rectY, Math.min(circleCenterY, rectY + rectHeight));
+    
+    // Calculate the distance between the circle's center and this closest point
+    const distanceX = circleX - closestX;
+    const distanceY = circleCenterY - closestY;
+    const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+    
+    // Check if the distance is less than the circle's radius (collision detected)
+    return distanceSquared < (circleRadius * circleRadius);
+  };
+
+  const validateBallPositions = () => {
+    // Get all barriers
+    const barriers = entities.filter(e => e.type === "barrier");
+    
+    if (barriers.length === 0) {
+      return { valid: true }; // No barriers, so no collision possible
+    }
+
+    // Check all target balls (entities with type "target")
+    const targets = entities.filter(e => e.type === "target");
+    for (const target of targets) {
+      const ballCenterX = target.x + target.width / 2;
+      const ballCenterY = target.y + target.height / 2;
+      const ballRadius = target.width / 2; // Assuming width === height for balls
+      
+      for (const barrier of barriers) {
+        if (checkCircleRectangleCollision(ballCenterX, ballCenterY, ballRadius, barrier.x, barrier.y, barrier.width, barrier.height)) {
+          return {
+            valid: false,
+            message: "Cannot simulate: A ball is placed inside or overlapping a barrier. Please move the ball to a valid position."
+          };
+        }
+      }
+    }
+
+    // Check key hallucination balls if in hallucination mode
+    if (mode === "hallucination" && keyHallucinations.length > 0) {
+      // Assume hallucination balls have the same size as target balls
+      const ballRadius = targets.length > 0 ? targets[0].width / 2 : 0.5; // Default to 0.5 if no targets
+      
+      for (let i = 0; i < keyHallucinations.length; i++) {
+        const halluc = keyHallucinations[i];
+        const ballCenterX = halluc.x;
+        const ballCenterY = halluc.y;
+        
+        for (const barrier of barriers) {
+          if (checkCircleRectangleCollision(ballCenterX, ballCenterY, ballRadius, barrier.x, barrier.y, barrier.width, barrier.height)) {
+            return {
+              valid: false,
+              message: `Cannot simulate: Key hallucination at frame ${halluc.startFrame} is placed inside or overlapping a barrier. Please move it to a valid position.`
+            };
+          }
+        }
+      }
+    }
+
+    return { valid: true };
+  };
+
   const handleSimulate = async (autoRun = false) => {
+    // Validate ball positions before simulating
+    const validation = validateBallPositions();
+    if (!validation.valid) {
+      alert(validation.message);
+      return; // Don't proceed with simulation
+    }
+
     const requestBody = {
       entities,
       simulationParams: {

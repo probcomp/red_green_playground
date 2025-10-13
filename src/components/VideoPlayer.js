@@ -552,9 +552,10 @@ const VideoPlayer = forwardRef(({
   // Auto-create initial hallucination position when "Add Key Hallucination" is clicked
   useEffect(() => {
     if (isAddingKeyHallucination && !hallucinationPosition && editingHallucinationIndex === null) {
-      // Set initial position to center of scene
-      const centerX = simWorldWidth / 2;
-      const centerY = simWorldHeight / 2;
+      // Set initial position to center of scene (convert from center to bottom-left)
+      const radius = simData.target.size / 2;
+      const centerX = simWorldWidth / 2 - radius;
+      const centerY = simWorldHeight / 2 - radius;
       setHallucinationPosition({ x: centerX, y: centerY });
       setHallucinationDirection(0);
     }
@@ -584,9 +585,14 @@ const VideoPlayer = forwardRef(({
     const canvasX = (e.clientX - rect.left) * scaleX;
     const canvasY = (e.clientY - rect.top) * scaleY;
     
-    // Convert canvas coordinates to world coordinates
-    const worldX = (canvasX / canvasWidth) * simWorldWidth;
-    const worldY = simWorldHeight - ((canvasY / canvasHeight) * simWorldHeight);
+    // Convert canvas coordinates to world coordinates (center of where clicked)
+    const centerWorldX = (canvasX / canvasWidth) * simWorldWidth;
+    const centerWorldY = simWorldHeight - ((canvasY / canvasHeight) * simWorldHeight);
+    
+    // Convert from center to bottom-left corner (backend stores positions as bottom-left)
+    const radius = simData.target.size / 2;
+    const worldX = centerWorldX - radius;
+    const worldY = centerWorldY - radius;
     
     // Update hallucination position
     setHallucinationPosition({ x: worldX, y: worldY });
@@ -690,11 +696,12 @@ const VideoPlayer = forwardRef(({
           }}>
             {(() => {
               const radius = simData.target.size / 2;
-              const px_scale = displayWidth / simWorldWidth;
-              const centerX = (hallucinationPosition.x + radius) * px_scale;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
-              const lineEndX = centerX + hallucinationSpeed * px_scale * Math.cos(hallucinationDirection);
-              const lineEndY = centerY - hallucinationSpeed * px_scale * Math.sin(hallucinationDirection);
+              const px_scale_x = displayWidth / simWorldWidth;
+              const px_scale_y = displayHeight / simWorldHeight;
+              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
+              const lineEndX = centerX + hallucinationSpeed * px_scale_x * Math.cos(hallucinationDirection);
+              const lineEndY = centerY - hallucinationSpeed * px_scale_y * Math.sin(hallucinationDirection);
               
               return (
                 <line
@@ -713,16 +720,17 @@ const VideoPlayer = forwardRef(({
           <Rnd
             size={(() => {
               const radius = simData.target.size / 2;
-              const px_scale = displayWidth / simWorldWidth;
-              const ballSizePx = radius * 2 * px_scale;
+              const px_scale_x = displayWidth / simWorldWidth;
+              const ballSizePx = radius * 2 * px_scale_x;
               return { width: ballSizePx, height: ballSizePx };
             })()}
             position={(() => {
               const radius = simData.target.size / 2;
-              const px_scale = displayWidth / simWorldWidth;
-              const centerX = (hallucinationPosition.x + radius) * px_scale;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
-              const ballSizePx = radius * 2 * px_scale;
+              const px_scale_x = displayWidth / simWorldWidth;
+              const px_scale_y = displayHeight / simWorldHeight;
+              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
+              const ballSizePx = radius * 2 * px_scale_x;
               return {
                 x: centerX - ballSizePx / 2,
                 y: centerY - ballSizePx / 2
@@ -731,14 +739,15 @@ const VideoPlayer = forwardRef(({
             bounds="parent"
             onDragStop={(e, d) => {
               const radius = simData.target.size / 2;
-              const px_scale = displayWidth / simWorldWidth;
-              const ballSizePx = radius * 2 * px_scale;
+              const px_scale_x = displayWidth / simWorldWidth;
+              const px_scale_y = displayHeight / simWorldHeight;
+              const ballSizePx = radius * 2 * px_scale_x;
               const centerX = d.x + ballSizePx / 2;
               const centerY = d.y + ballSizePx / 2;
               
               // Convert display coordinates to world coordinates
-              const worldX = (centerX / px_scale) - radius;
-              const worldY = ((displayHeight - centerY) / (displayHeight / simWorldHeight)) - radius;
+              const worldX = (centerX / px_scale_x) - radius;
+              const worldY = ((displayHeight - centerY) / px_scale_y) - radius;
               
               setHallucinationPosition({ x: worldX, y: worldY });
             }}
@@ -766,11 +775,12 @@ const VideoPlayer = forwardRef(({
             size={{ width: displayWidth / simWorldWidth, height: displayWidth / simWorldWidth }}
             position={(() => {
               const radius = simData.target.size / 2;
-              const px_scale = displayWidth / simWorldWidth;
-              const centerX = (hallucinationPosition.x + radius) * px_scale;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
-              const lineEndX = centerX + hallucinationSpeed * px_scale * Math.cos(hallucinationDirection);
-              const lineEndY = centerY - hallucinationSpeed * px_scale * Math.sin(hallucinationDirection);
+              const px_scale_x = displayWidth / simWorldWidth;
+              const px_scale_y = displayHeight / simWorldHeight;
+              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
+              const lineEndX = centerX + hallucinationSpeed * px_scale_x * Math.cos(hallucinationDirection);
+              const lineEndY = centerY - hallucinationSpeed * px_scale_y * Math.sin(hallucinationDirection);
               return {
                 x: lineEndX - (displayWidth / simWorldWidth) / 2,
                 y: lineEndY - (displayWidth / simWorldWidth) / 2
@@ -781,9 +791,10 @@ const VideoPlayer = forwardRef(({
             onDragStop={(e, d) => {
               setIsDraggingHallucDirection(false);
               const radius = simData.target.size / 2;
-              const px_scale = displayWidth / simWorldWidth;
-              const centerX = (hallucinationPosition.x + radius) * px_scale;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * (displayHeight / simWorldHeight));
+              const px_scale_x = displayWidth / simWorldWidth;
+              const px_scale_y = displayHeight / simWorldHeight;
+              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
               
               const deltaX = (d.x + (displayWidth / simWorldWidth) / 2) - centerX;
               const deltaY = centerY - (d.y + (displayWidth / simWorldWidth) / 2);

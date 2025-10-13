@@ -68,13 +68,14 @@ def check_collision_with_ball(x1, y1, r1, x2, y2, r2):
     dist_sq = (x1 - x2)**2 + (y1 - y2)**2
     return dist_sq < (r1 + r2)**2
 
-def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, elasticity, friction, space):
+def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, ballSpeed, elasticity, friction, space):
     """Simulate a single key hallucination"""
     startFrame = keyHalluc['startFrame']
-    x = keyHalluc['x']
-    y = keyHalluc['y']
+    x = keyHalluc['x']  # Bottom-left corner x
+    y = keyHalluc['y']  # Bottom-left corner y
     direction = keyHalluc['direction']
     duration = keyHalluc['duration']
+    halluc_speed = keyHalluc.get('speed', ballSpeed)  # Get speed from keyHalluc, default to ballSpeed
     
     # Calculate number of frames for this hallucination
     numHallucFrames = int(duration * FPS)
@@ -110,8 +111,12 @@ def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIM
     mass = 1.0
     moment = pymunk.moment_for_circle(mass, 0, radius)
     body = pymunk.Body(mass, moment, body_type=pymunk.Body.DYNAMIC)
-    body.position = (x, y)
-    vx, vy = np.cos(direction), np.sin(direction)
+    # Convert bottom-left corner to center for pymunk body position
+    body.position = (x + radius, y + radius)
+    # Scale velocity based on hallucination speed relative to main ball speed
+    # TIMESTEP is calibrated for ballSpeed, so velocity magnitude should be halluc_speed/ballSpeed
+    velocity_scale = halluc_speed / ballSpeed
+    vx, vy = velocity_scale * np.cos(direction), velocity_scale * np.sin(direction)
     body.velocity = (vx, vy)
     shape = pymunk.Circle(body, radius)
     shape.elasticity = elasticity
@@ -143,7 +148,7 @@ def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIM
     
     return halluc_data
 
-def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, elasticity, friction, space):
+def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, ballSpeed, elasticity, friction, space):
     """Generate and simulate random hallucinations"""
     probability = randomParams['probability']
     seed = randomParams['seed']
@@ -230,7 +235,8 @@ def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeig
                     'x': spawn_x,
                     'y': spawn_y,
                     'direction': direction,
-                    'duration': duration
+                    'duration': duration,
+                    'speed': ballSpeed  # Random hallucinations use the same speed as main ball
                 },
                 sim_data,
                 worldWidth,
@@ -238,6 +244,7 @@ def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeig
                 TIMESTEP,
                 FRAME_INTERVAL,
                 FPS,
+                ballSpeed,
                 elasticity,
                 friction,
                 space
@@ -461,6 +468,7 @@ def run_simulation_with_visualization(entities, simulationParams, hallucinationP
                 TIMESTEP,
                 FRAME_INTERVAL,
                 FPS,
+                ballSpeed,
                 elasticity,
                 friction,
                 space  # Reuse the space for collision detection with barriers
@@ -479,6 +487,7 @@ def run_simulation_with_visualization(entities, simulationParams, hallucinationP
                 TIMESTEP,
                 FRAME_INTERVAL,
                 FPS,
+                ballSpeed,
                 elasticity,
                 friction,
                 space
