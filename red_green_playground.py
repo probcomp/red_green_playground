@@ -165,6 +165,10 @@ def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeig
     
     # For each frame, potentially spawn a hallucination
     for frame in range(numFrames):
+        # Skip the first 10 frames - no random hallucinations in the beginning
+        if frame < 10:
+            continue
+        
         # Count how many hallucinations are active at this frame
         active_count = 0
         for halluc in random_hallucs:
