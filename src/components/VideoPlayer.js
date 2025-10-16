@@ -241,47 +241,49 @@ const VideoPlayer = forwardRef(({
             }
           };
 
-          // Render hallucinations (key and random)
-          if (simData.key_hallucinations) {
-            simData.key_hallucinations.forEach(halluc => {
-              if (halluc.step_data && halluc.step_data[frameIndex]) {
-                const halData = halluc.step_data[frameIndex];
-                const targetSize = simData.target.size;
-                const radius = targetSize / 2;
-                const tx = halData.x;
-                const ty = halData.y;
+          // Render hallucinations (key and random) before occluders if not lifted and revealed
+          if (!(liftUpTarget && !disguiseHallucinations)) {
+            if (simData.key_hallucinations) {
+              simData.key_hallucinations.forEach(halluc => {
+                if (halluc.step_data && halluc.step_data[frameIndex]) {
+                  const halData = halluc.step_data[frameIndex];
+                  const targetSize = simData.target.size;
+                  const radius = targetSize / 2;
+                  const tx = halData.x;
+                  const ty = halData.y;
 
-                const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-                const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-                const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-                tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
-                tempCtx.beginPath();
-                tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-                tempCtx.fill();
-              }
-            });
-          }
+                  tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+                  tempCtx.beginPath();
+                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                  tempCtx.fill();
+                }
+              });
+            }
 
-          if (simData.random_hallucinations) {
-            simData.random_hallucinations.forEach(halluc => {
-              if (halluc.step_data && halluc.step_data[frameIndex]) {
-                const halData = halluc.step_data[frameIndex];
-                const targetSize = simData.target.size;
-                const radius = targetSize / 2;
-                const tx = halData.x;
-                const ty = halData.y;
+            if (simData.random_hallucinations) {
+              simData.random_hallucinations.forEach(halluc => {
+                if (halluc.step_data && halluc.step_data[frameIndex]) {
+                  const halData = halluc.step_data[frameIndex];
+                  const targetSize = simData.target.size;
+                  const radius = targetSize / 2;
+                  const tx = halData.x;
+                  const ty = halData.y;
 
-                const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-                const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-                const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-                tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
-            tempCtx.beginPath();
-            tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-            tempCtx.fill();
-              }
-            });
+                  tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+                  tempCtx.beginPath();
+                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                  tempCtx.fill();
+                }
+              });
+            }
           }
 
           // Render target before occluders if not lifted
@@ -305,6 +307,91 @@ const VideoPlayer = forwardRef(({
           // Render target after occluders if lifted
           if (liftUpTarget) {
             renderTargetTemp(true);
+          }
+          
+          // Render hallucinations after occluders if lifted and revealed
+          if (liftUpTarget && !disguiseHallucinations) {
+            if (simData.key_hallucinations) {
+              simData.key_hallucinations.forEach(halluc => {
+                if (halluc.step_data && halluc.step_data[frameIndex]) {
+                  const halData = halluc.step_data[frameIndex];
+                  const targetSize = simData.target.size;
+                  const radius = targetSize / 2;
+                  const tx = halData.x;
+                  const ty = halData.y;
+
+                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                  // Check if hallucination is under an occluder when lifted and revealed
+                  let underOccluder = false;
+                  for (const occluder of simData.occluders) {
+                    if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                        ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                      underOccluder = true;
+                      break;
+                    }
+                  }
+
+                  if (underOccluder) {
+                    tempCtx.fillStyle = 'rgba(138, 43, 226, 0.3)'; // Semi-transparent purple when occluded
+                  } else {
+                    tempCtx.fillStyle = 'rgb(138, 43, 226)';
+                  }
+                  
+                  tempCtx.beginPath();
+                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                  tempCtx.fill();
+                  
+                  // Add border if lifted and revealed
+                  tempCtx.strokeStyle = '#000';
+                  tempCtx.lineWidth = 2 * scaleFactor;
+                  tempCtx.stroke();
+                }
+              });
+            }
+
+            if (simData.random_hallucinations) {
+              simData.random_hallucinations.forEach(halluc => {
+                if (halluc.step_data && halluc.step_data[frameIndex]) {
+                  const halData = halluc.step_data[frameIndex];
+                  const targetSize = simData.target.size;
+                  const radius = targetSize / 2;
+                  const tx = halData.x;
+                  const ty = halData.y;
+
+                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                  // Check if hallucination is under an occluder when lifted and revealed
+                  let underOccluder = false;
+                  for (const occluder of simData.occluders) {
+                    if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                        ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                      underOccluder = true;
+                      break;
+                    }
+                  }
+
+                  if (underOccluder) {
+                    tempCtx.fillStyle = 'rgba(255, 105, 180, 0.3)'; // Semi-transparent pink when occluded
+                  } else {
+                    tempCtx.fillStyle = 'rgb(255, 105, 180)';
+                  }
+                  
+                  tempCtx.beginPath();
+                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                  tempCtx.fill();
+                  
+                  // Add border if lifted and revealed
+                  tempCtx.strokeStyle = '#000';
+                  tempCtx.lineWidth = 2 * scaleFactor;
+                  tempCtx.stroke();
+                }
+              });
+            }
           }
         };
 
@@ -433,47 +520,49 @@ const VideoPlayer = forwardRef(({
         }
       };
 
-      // Render hallucinations (key and random) before occluders
-      if (simData.key_hallucinations) {
-        simData.key_hallucinations.forEach(halluc => {
-          if (halluc.step_data && halluc.step_data[frameIndex]) {
-            const halData = halluc.step_data[frameIndex];
-            const targetSize = simData.target.size;
-            const radius = targetSize / 2;
-            const tx = halData.x;
-            const ty = halData.y;
+      // Render hallucinations (key and random) before occluders if not lifted and revealed
+      if (!(liftUpTarget && !disguiseHallucinations)) {
+        if (simData.key_hallucinations) {
+          simData.key_hallucinations.forEach(halluc => {
+            if (halluc.step_data && halluc.step_data[frameIndex]) {
+              const halData = halluc.step_data[frameIndex];
+              const targetSize = simData.target.size;
+              const radius = targetSize / 2;
+              const tx = halData.x;
+              const ty = halData.y;
 
-            const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
-            const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
-            const canvasRadius = radius * (canvasWidth / simWorldWidth);
+              const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+              const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+              const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-            ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
-            ctx.beginPath();
-            ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-            ctx.fill();
-          }
-        });
-      }
+              ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+              ctx.beginPath();
+              ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          });
+        }
 
-      if (simData.random_hallucinations) {
-        simData.random_hallucinations.forEach(halluc => {
-          if (halluc.step_data && halluc.step_data[frameIndex]) {
-            const halData = halluc.step_data[frameIndex];
-            const targetSize = simData.target.size;
-            const radius = targetSize / 2;
-            const tx = halData.x;
-            const ty = halData.y;
+        if (simData.random_hallucinations) {
+          simData.random_hallucinations.forEach(halluc => {
+            if (halluc.step_data && halluc.step_data[frameIndex]) {
+              const halData = halluc.step_data[frameIndex];
+              const targetSize = simData.target.size;
+              const radius = targetSize / 2;
+              const tx = halData.x;
+              const ty = halData.y;
 
-            const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
-            const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
-            const canvasRadius = radius * (canvasWidth / simWorldWidth);
+              const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+              const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+              const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-            ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
-        ctx.beginPath();
-        ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-        ctx.fill();
-          }
-        });
+              ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+              ctx.beginPath();
+              ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          });
+        }
       }
 
       // Render target before occluders if not lifted
@@ -497,6 +586,91 @@ const VideoPlayer = forwardRef(({
       // Render target after occluders if lifted
       if (liftUpTarget) {
         renderTarget(true);
+      }
+      
+      // Render hallucinations after occluders if lifted and revealed
+      if (liftUpTarget && !disguiseHallucinations) {
+        if (simData.key_hallucinations) {
+          simData.key_hallucinations.forEach(halluc => {
+            if (halluc.step_data && halluc.step_data[frameIndex]) {
+              const halData = halluc.step_data[frameIndex];
+              const targetSize = simData.target.size;
+              const radius = targetSize / 2;
+              const tx = halData.x;
+              const ty = halData.y;
+
+              const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+              const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+              const canvasRadius = radius * (canvasWidth / simWorldWidth);
+
+              // Check if hallucination is under an occluder when lifted and revealed
+              let underOccluder = false;
+              for (const occluder of simData.occluders) {
+                if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                    ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                  underOccluder = true;
+                  break;
+                }
+              }
+
+              if (underOccluder) {
+                ctx.fillStyle = 'rgba(138, 43, 226, 0.3)'; // Semi-transparent purple when occluded
+              } else {
+                ctx.fillStyle = 'rgb(138, 43, 226)';
+              }
+              
+              ctx.beginPath();
+              ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+              ctx.fill();
+              
+              // Add border if lifted and revealed
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          });
+        }
+
+        if (simData.random_hallucinations) {
+          simData.random_hallucinations.forEach(halluc => {
+            if (halluc.step_data && halluc.step_data[frameIndex]) {
+              const halData = halluc.step_data[frameIndex];
+              const targetSize = simData.target.size;
+              const radius = targetSize / 2;
+              const tx = halData.x;
+              const ty = halData.y;
+
+              const canvasX = (tx + radius) * (canvasWidth / simWorldWidth);
+              const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
+              const canvasRadius = radius * (canvasWidth / simWorldWidth);
+
+              // Check if hallucination is under an occluder when lifted and revealed
+              let underOccluder = false;
+              for (const occluder of simData.occluders) {
+                if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                    ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                  underOccluder = true;
+                  break;
+                }
+              }
+
+              if (underOccluder) {
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; // Semi-transparent pink when occluded
+              } else {
+                ctx.fillStyle = 'rgb(255, 105, 180)';
+              }
+              
+              ctx.beginPath();
+              ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+              ctx.fill();
+              
+              // Add border if lifted and revealed
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          });
+        }
       }
       
       // Note: Hallucination preview is now rendered via Rnd overlay components (not on canvas)
