@@ -56,7 +56,7 @@ function App() {
   // Saving and Loading params
   const [trial_name, setTrial_name] = useState('base'); // Default res multiplier
   const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null); // State to store the actual directory handle
-  const [autoDownloadWebM, setAutoDownloadWebM] = useState(false); // State for WebM download toggle
+  const [autoDownloadWebM, setAutoDownloadWebM] = useState(true); // State for WebM download toggle
 
   const px_scale = 25;
   const interval = 0.1;
@@ -579,13 +579,20 @@ function App() {
         
         // If user confirmed override, remove any existing WebM files
         if (existingTrialDirHandle) {
-          try {
-            // Try to remove any existing WebM file
-            await existingTrialDirHandle.removeEntry(`${trial_name}.webm`, { recursive: false });
-            console.log("Removed existing WebM file");
-          } catch (error) {
-            // File doesn't exist or couldn't be removed, which is fine
-            console.log("No existing WebM file to remove or couldn't remove it:", error);
+          const filesToRemove = [
+            `${trial_name}.webm`,  // Old format
+            `${trial_name}_stimulus.webm`,
+            `${trial_name}_revealed.webm`
+          ];
+          
+          for (const filename of filesToRemove) {
+            try {
+              await existingTrialDirHandle.removeEntry(filename, { recursive: false });
+              console.log(`Removed existing WebM file: ${filename}`);
+            } catch (error) {
+              // File doesn't exist or couldn't be removed, which is fine
+              console.log(`No existing WebM file to remove (${filename}):`, error);
+            }
           }
         }
       }

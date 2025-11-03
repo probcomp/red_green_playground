@@ -64,357 +64,385 @@ const VideoPlayer = forwardRef(({
       return Promise.reject(new Error("No simulation data available"));
     }
 
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Test if MediaRecorder is supported
-        if (!window.MediaRecorder) {
-          throw new Error("MediaRecorder is not supported in this browser");
-        }
-
-        // Test if the required codec is supported
-        const supportedTypes = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
-          ? 'video/webm;codecs=vp9' 
-          : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-          ? 'video/webm;codecs=vp8'
-          : 'video/webm';
-
-        // Create a temporary off-screen canvas with 3x resolution for high quality recording
-        const tempCanvas = document.createElement('canvas');
-        const scaleFactor = 3;
-        tempCanvas.width = canvasWidth * scaleFactor;
-        tempCanvas.height = canvasHeight * scaleFactor;
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        // Disable image smoothing for crisp pixels
-        tempCtx.imageSmoothingEnabled = false;
-
-        // Create off-screen stream (won't affect visible canvas)
-        const stream = tempCanvas.captureStream(fps);
-        
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: supportedTypes,
-          videoBitsPerSecond: 8000000 // High bitrate for quality
-        });
-
-        const chunks = [];
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            chunks.push(event.data);
+    // Helper function to record a single video with specific render settings
+    const recordVideo = async (renderSettings, filename) => {
+      return new Promise((resolve, reject) => {
+        try {
+          // Test if MediaRecorder is supported
+          if (!window.MediaRecorder) {
+            throw new Error("MediaRecorder is not supported in this browser");
           }
-        };
 
-        mediaRecorder.onstop = async () => {
-          const webmBlob = new Blob(chunks, { type: 'video/webm' });
+          // Test if the required codec is supported
+          const supportedTypes = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
+            ? 'video/webm;codecs=vp9' 
+            : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+            ? 'video/webm;codecs=vp8'
+            : 'video/webm';
+
+          // Create a temporary off-screen canvas with 3x resolution for high quality recording
+          const tempCanvas = document.createElement('canvas');
+          const scaleFactor = 3;
+          tempCanvas.width = canvasWidth * scaleFactor;
+          tempCanvas.height = canvasHeight * scaleFactor;
+          const tempCtx = tempCanvas.getContext('2d');
           
-          try {
-            // If saveDirectoryHandle is available, save to the selected directory
-            if (saveDirectoryHandle) {
-              const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
-              const videoFileHandle = await trialDirHandle.getFileHandle(`${trial_name}.webm`, { create: true });
-              const videoWritable = await videoFileHandle.createWritable();
-              await videoWritable.write(webmBlob);
-              await videoWritable.close();
-            } else {
-              // Download WebM file directly
+          // Disable image smoothing for crisp pixels
+          tempCtx.imageSmoothingEnabled = false;
+
+          // Create off-screen stream (won't affect visible canvas)
+          const stream = tempCanvas.captureStream(fps);
+          
+          const mediaRecorder = new MediaRecorder(stream, {
+            mimeType: supportedTypes,
+            videoBitsPerSecond: 8000000 // High bitrate for quality
+          });
+
+          const chunks = [];
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              chunks.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = async () => {
+            const webmBlob = new Blob(chunks, { type: 'video/webm' });
+            
+            try {
+              // If saveDirectoryHandle is available, save to the selected directory
+              if (saveDirectoryHandle) {
+                const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
+                const videoFileHandle = await trialDirHandle.getFileHandle(filename, { create: true });
+                const videoWritable = await videoFileHandle.createWritable();
+                await videoWritable.write(webmBlob);
+                await videoWritable.close();
+              } else {
+                // Download WebM file directly
+                const url = URL.createObjectURL(webmBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }
+              resolve(); // Resolve the promise when download is complete
+            } catch (error) {
+              console.error("Error saving video to directory:", error);
+              // Fallback to download if directory save fails
               const url = URL.createObjectURL(webmBlob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `${trial_name}.webm`;
+              a.download = filename;
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
+              resolve(); // Resolve the promise when fallback download is complete
             }
-            resolve(); // Resolve the promise when download is complete
-          } catch (error) {
-            console.error("Error saving video to directory:", error);
-            // Fallback to download if directory save fails
-            const url = URL.createObjectURL(webmBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${trial_name}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            resolve(); // Resolve the promise when fallback download is complete
-          }
-        };
+          };
 
-        mediaRecorder.onerror = (event) => {
-          console.error("MediaRecorder error:", event);
-          setIsRecording(false);
-          reject(new Error("MediaRecorder error"));
-        };
+          mediaRecorder.onerror = (event) => {
+            console.error("MediaRecorder error:", event);
+            reject(new Error("MediaRecorder error"));
+          };
 
-        // Start recording
-        mediaRecorder.start();
-        setIsRecording(true);
+          // Start recording
+          mediaRecorder.start();
+          setIsRecording(true);
 
-        // Background rendering function (doesn't affect visible canvas)
-        const renderFrameToTempCanvas = (frameIndex) => {
-          // Clear temp canvas
-          tempCtx.fillStyle = 'white';
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height); 
-
-          // Render sensors first 
-          if (simData.green_sensor) {
-            const sensor = simData.green_sensor;
-            tempCtx.fillStyle = 'rgb(0, 255, 0)';
+          // Background rendering function with configurable settings
+          const renderFrameToTempCanvas = (frameIndex, settings) => {
+            const { disguiseDistractors: disguise, liftUpTarget: liftUp } = settings;
             
-            // Convert world coordinates to temp canvas coordinates with scale factor
-            const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
-            const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
-            const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
-            const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
-            
-            tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
-          }
+            // Clear temp canvas
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height); 
 
-          if (simData.red_sensor) {
-            const sensor = simData.red_sensor;
-            tempCtx.fillStyle = 'rgb(255, 0, 0)';
-            
-            // Convert world coordinates to temp canvas coordinates with scale factor
-            const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
-            const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
-            const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
-            const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
-            
-            tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
-          }
+            // Render sensors first 
+            if (simData.green_sensor) {
+              const sensor = simData.green_sensor;
+              tempCtx.fillStyle = 'rgb(0, 255, 0)';
+              
+              // Convert world coordinates to temp canvas coordinates with scale factor
+              const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
+              const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
+              const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
+              const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
+              
+              tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
+            }
 
-          // Render barriers
-          simData.barriers.forEach(barrier => {
-            tempCtx.fillStyle = 'rgb(0, 0, 0)';
-            
-            // Convert world coordinates to temp canvas coordinates with scale factor
-            const canvasX = (barrier.x / simWorldWidth) * tempCanvas.width;
-            const canvasY = tempCanvas.height - ((barrier.y + barrier.height) / simWorldHeight) * tempCanvas.height;
-            const canvasWidth_barrier = (barrier.width / simWorldWidth) * tempCanvas.width;
-            const canvasHeight_barrier = (barrier.height / simWorldHeight) * tempCanvas.height;
-            
-            tempCtx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
-          }); 
+            if (simData.red_sensor) {
+              const sensor = simData.red_sensor;
+              tempCtx.fillStyle = 'rgb(255, 0, 0)';
+              
+              // Convert world coordinates to temp canvas coordinates with scale factor
+              const canvasX = (sensor.x / simWorldWidth) * tempCanvas.width;
+              const canvasY = tempCanvas.height - ((sensor.y + sensor.height) / simWorldHeight) * tempCanvas.height;
+              const canvasWidth_sensor = (sensor.width / simWorldWidth) * tempCanvas.width;
+              const canvasHeight_sensor = (sensor.height / simWorldHeight) * tempCanvas.height;
+              
+              tempCtx.fillRect(canvasX, canvasY, canvasWidth_sensor, canvasHeight_sensor);
+            }
 
-          // Render target function for temp canvas
-          const renderTargetTemp = (isLifted = false) => {
-          if (simData.step_data && simData.step_data[frameIndex]) {
-            const targetData = simData.step_data[frameIndex];
-            const targetSize = simData.target.size;
-            const radius = targetSize / 2;
-            const tx = targetData.x;
-            const ty = targetData.y;
+            // Render barriers
+            simData.barriers.forEach(barrier => {
+              tempCtx.fillStyle = 'rgb(0, 0, 0)';
+              
+              // Convert world coordinates to temp canvas coordinates with scale factor
+              const canvasX = (barrier.x / simWorldWidth) * tempCanvas.width;
+              const canvasY = tempCanvas.height - ((barrier.y + barrier.height) / simWorldHeight) * tempCanvas.height;
+              const canvasWidth_barrier = (barrier.width / simWorldWidth) * tempCanvas.width;
+              const canvasHeight_barrier = (barrier.height / simWorldHeight) * tempCanvas.height;
+              
+              tempCtx.fillRect(canvasX, canvasY, canvasWidth_barrier, canvasHeight_barrier);
+            }); 
 
-            const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-            const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-            const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+            // Render target function for temp canvas
+            const renderTargetTemp = (isLifted = false) => {
+            if (simData.step_data && simData.step_data[frameIndex]) {
+              const targetData = simData.step_data[frameIndex];
+              const targetSize = simData.target.size;
+              const radius = targetSize / 2;
+              const tx = targetData.x;
+              const ty = targetData.y;
 
-              if (isLifted) {
-                let underOccluder = false;
-                for (const occluder of simData.occluders) {
-                  if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
-                      ty + radius > occluder.y && ty < occluder.y + occluder.height) {
-                    underOccluder = true;
-                    break;
+              const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+              const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+              const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                if (isLifted) {
+                  let underOccluder = false;
+                  for (const occluder of simData.occluders) {
+                    if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                        ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                      underOccluder = true;
+                      break;
+                    }
                   }
-                }
-                
-                if (underOccluder) {
-                  tempCtx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                  
+                  if (underOccluder) {
+                    tempCtx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                  } else {
+                    tempCtx.fillStyle = 'rgb(0, 0, 255)';
+                  }
                 } else {
-                  tempCtx.fillStyle = 'rgb(0, 0, 255)';
+              tempCtx.fillStyle = 'rgb(0, 0, 255)';
                 }
-              } else {
-            tempCtx.fillStyle = 'rgb(0, 0, 255)';
+
+                tempCtx.beginPath();
+                tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                tempCtx.fill();
+                
+                if (liftUp) {
+                  tempCtx.strokeStyle = '#000';
+                  tempCtx.lineWidth = 2 * scaleFactor;
+                  tempCtx.stroke();
+                }
+              }
+            };
+
+            // Render distractors (key and random) before occluders if not lifted and revealed
+            if (!(liftUp && !disguise)) {
+              if (simData.key_distractors) {
+                simData.key_distractors.forEach(distractor => {
+                  if (distractor.step_data && distractor.step_data[frameIndex]) {
+                    const halData = distractor.step_data[frameIndex];
+                    const targetSize = simData.target.size;
+                    const radius = targetSize / 2;
+                    const tx = halData.x;
+                    const ty = halData.y;
+
+                    const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                    const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                    const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                    tempCtx.fillStyle = disguise ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+                    tempCtx.beginPath();
+                    tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                    tempCtx.fill();
+                  }
+                });
               }
 
-              tempCtx.beginPath();
-              tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-              tempCtx.fill();
+              if (simData.random_distractors) {
+                simData.random_distractors.forEach(distractor => {
+                  if (distractor.step_data && distractor.step_data[frameIndex]) {
+                    const halData = distractor.step_data[frameIndex];
+                    const targetSize = simData.target.size;
+                    const radius = targetSize / 2;
+                    const tx = halData.x;
+                    const ty = halData.y;
+
+                    const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                    const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                    const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                    tempCtx.fillStyle = disguise ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+                    tempCtx.beginPath();
+                    tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                    tempCtx.fill();
+                  }
+                });
+              }
+            }
+
+            // Render target before occluders if not lifted
+            if (!liftUp) {
+              renderTargetTemp(false);
+            }
+
+            // Render occluders
+            simData.occluders.forEach(occluder => {
+              tempCtx.fillStyle = 'rgb(128, 128, 128)';
               
-              if (liftUpTarget) {
-                tempCtx.strokeStyle = '#000';
-                tempCtx.lineWidth = 2 * scaleFactor;
-                tempCtx.stroke();
+              // Convert world coordinates to temp canvas coordinates with scale factor
+              const canvasX = (occluder.x / simWorldWidth) * tempCanvas.width;
+              const canvasY = tempCanvas.height - ((occluder.y + occluder.height) / simWorldHeight) * tempCanvas.height;
+              const canvasWidth_occluder = (occluder.width / simWorldWidth) * tempCanvas.width;
+              const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
+              
+              tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
+            }); 
+            
+            // Render target after occluders if lifted
+            if (liftUp) {
+              renderTargetTemp(true);
+            }
+            
+            // Render distractors after occluders if lifted and revealed
+            if (liftUp && !disguise) {
+              if (simData.key_distractors) {
+                simData.key_distractors.forEach(distractor => {
+                  if (distractor.step_data && distractor.step_data[frameIndex]) {
+                    const halData = distractor.step_data[frameIndex];
+                    const targetSize = simData.target.size;
+                    const radius = targetSize / 2;
+                    const tx = halData.x;
+                    const ty = halData.y;
+
+                    const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                    const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                    const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                    // Check if distractor is under an occluder when lifted and revealed
+                    let underOccluder = false;
+                    for (const occluder of simData.occluders) {
+                      if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                          ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                        underOccluder = true;
+                        break;
+                      }
+                    }
+
+                    if (underOccluder) {
+                      tempCtx.fillStyle = 'rgba(138, 43, 226, 0.3)'; // Semi-transparent purple when occluded
+                    } else {
+                      tempCtx.fillStyle = 'rgb(138, 43, 226)';
+                    }
+                    
+                    tempCtx.beginPath();
+                    tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                    tempCtx.fill();
+                    
+                    // Add border if lifted and revealed
+                    tempCtx.strokeStyle = '#000';
+                    tempCtx.lineWidth = 2 * scaleFactor;
+                    tempCtx.stroke();
+                  }
+                });
+              }
+
+              if (simData.random_distractors) {
+                simData.random_distractors.forEach(distractor => {
+                  if (distractor.step_data && distractor.step_data[frameIndex]) {
+                    const halData = distractor.step_data[frameIndex];
+                    const targetSize = simData.target.size;
+                    const radius = targetSize / 2;
+                    const tx = halData.x;
+                    const ty = halData.y;
+
+                    const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
+                    const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
+                    const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
+
+                    // Check if distractor is under an occluder when lifted and revealed
+                    let underOccluder = false;
+                    for (const occluder of simData.occluders) {
+                      if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
+                          ty + radius > occluder.y && ty < occluder.y + occluder.height) {
+                        underOccluder = true;
+                        break;
+                      }
+                    }
+
+                    if (underOccluder) {
+                      tempCtx.fillStyle = 'rgba(255, 105, 180, 0.3)'; // Semi-transparent pink when occluded
+                    } else {
+                      tempCtx.fillStyle = 'rgb(255, 105, 180)';
+                    }
+                    
+                    tempCtx.beginPath();
+                    tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+                    tempCtx.fill();
+                    
+                    // Add border if lifted and revealed
+                    tempCtx.strokeStyle = '#000';
+                    tempCtx.lineWidth = 2 * scaleFactor;
+                    tempCtx.stroke();
+                  }
+                });
               }
             }
           };
 
-          // Render distractors (key and random) before occluders if not lifted and revealed
-          if (!(liftUpTarget && !disguiseDistractors)) {
-            if (simData.key_distractors) {
-              simData.key_distractors.forEach(distractor => {
-                if (distractor.step_data && distractor.step_data[frameIndex]) {
-                  const halData = distractor.step_data[frameIndex];
-                  const targetSize = simData.target.size;
-                  const radius = targetSize / 2;
-                  const tx = halData.x;
-                  const ty = halData.y;
-
-                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
-
-                  tempCtx.fillStyle = disguiseDistractors ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
-                  tempCtx.beginPath();
-                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-                  tempCtx.fill();
-                }
-              });
-            }
-
-            if (simData.random_distractors) {
-              simData.random_distractors.forEach(distractor => {
-                if (distractor.step_data && distractor.step_data[frameIndex]) {
-                  const halData = distractor.step_data[frameIndex];
-                  const targetSize = simData.target.size;
-                  const radius = targetSize / 2;
-                  const tx = halData.x;
-                  const ty = halData.y;
-
-                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
-
-                  tempCtx.fillStyle = disguiseDistractors ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
-                  tempCtx.beginPath();
-                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-                  tempCtx.fill();
-                }
-              });
-            }
-          }
-
-          // Render target before occluders if not lifted
-          if (!liftUpTarget) {
-            renderTargetTemp(false);
-          }
-
-          // Render occluders
-          simData.occluders.forEach(occluder => {
-            tempCtx.fillStyle = 'rgb(128, 128, 128)';
+          // Render all frames in background with timing (doesn't affect visible canvas)
+          let frameIndex = 0;
+          const frameInterval = setInterval(() => {
+            renderFrameToTempCanvas(frameIndex, renderSettings);
+            frameIndex++;
             
-            // Convert world coordinates to temp canvas coordinates with scale factor
-            const canvasX = (occluder.x / simWorldWidth) * tempCanvas.width;
-            const canvasY = tempCanvas.height - ((occluder.y + occluder.height) / simWorldHeight) * tempCanvas.height;
-            const canvasWidth_occluder = (occluder.width / simWorldWidth) * tempCanvas.width;
-            const canvasHeight_occluder = (occluder.height / simWorldHeight) * tempCanvas.height;
-            
-            tempCtx.fillRect(canvasX, canvasY, canvasWidth_occluder, canvasHeight_occluder);
-          }); 
-          
-          // Render target after occluders if lifted
-          if (liftUpTarget) {
-            renderTargetTemp(true);
-          }
-          
-          // Render distractors after occluders if lifted and revealed
-          if (liftUpTarget && !disguiseDistractors) {
-            if (simData.key_distractors) {
-              simData.key_distractors.forEach(distractor => {
-                if (distractor.step_data && distractor.step_data[frameIndex]) {
-                  const halData = distractor.step_data[frameIndex];
-                  const targetSize = simData.target.size;
-                  const radius = targetSize / 2;
-                  const tx = halData.x;
-                  const ty = halData.y;
-
-                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
-
-                  // Check if distractor is under an occluder when lifted and revealed
-                  let underOccluder = false;
-                  for (const occluder of simData.occluders) {
-                    if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
-                        ty + radius > occluder.y && ty < occluder.y + occluder.height) {
-                      underOccluder = true;
-                      break;
-                    }
-                  }
-
-                  if (underOccluder) {
-                    tempCtx.fillStyle = 'rgba(138, 43, 226, 0.3)'; // Semi-transparent purple when occluded
-                  } else {
-                    tempCtx.fillStyle = 'rgb(138, 43, 226)';
-                  }
-                  
-                  tempCtx.beginPath();
-                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-                  tempCtx.fill();
-                  
-                  // Add border if lifted and revealed
-                  tempCtx.strokeStyle = '#000';
-                  tempCtx.lineWidth = 2 * scaleFactor;
-                  tempCtx.stroke();
-                }
-              });
+            if (frameIndex >= numFrames) {
+              clearInterval(frameInterval);
+              setTimeout(() => {
+                mediaRecorder.stop();
+                setIsRecording(false);
+              }, 100);
             }
+          }, 1000 / fps);
+        } catch (error) {
+          console.error("Error in recordVideo:", error);
+          setIsRecording(false);
+          reject(error);
+        }
+      });
+    };
 
-            if (simData.random_distractors) {
-              simData.random_distractors.forEach(distractor => {
-                if (distractor.step_data && distractor.step_data[frameIndex]) {
-                  const halData = distractor.step_data[frameIndex];
-                  const targetSize = simData.target.size;
-                  const radius = targetSize / 2;
-                  const tx = halData.x;
-                  const ty = halData.y;
-
-                  const canvasX = (tx + radius) * (tempCanvas.width / simWorldWidth);
-                  const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
-                  const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
-
-                  // Check if distractor is under an occluder when lifted and revealed
-                  let underOccluder = false;
-                  for (const occluder of simData.occluders) {
-                    if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
-                        ty + radius > occluder.y && ty < occluder.y + occluder.height) {
-                      underOccluder = true;
-                      break;
-                    }
-                  }
-
-                  if (underOccluder) {
-                    tempCtx.fillStyle = 'rgba(255, 105, 180, 0.3)'; // Semi-transparent pink when occluded
-                  } else {
-                    tempCtx.fillStyle = 'rgb(255, 105, 180)';
-                  }
-                  
-                  tempCtx.beginPath();
-                  tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
-                  tempCtx.fill();
-                  
-                  // Add border if lifted and revealed
-                  tempCtx.strokeStyle = '#000';
-                  tempCtx.lineWidth = 2 * scaleFactor;
-                  tempCtx.stroke();
-                }
-              });
-            }
-          }
-        };
-
-        // Render all frames in background with timing (doesn't affect visible canvas)
-        let frameIndex = 0;
-        const frameInterval = setInterval(() => {
-          renderFrameToTempCanvas(frameIndex);
-          frameIndex++;
-          
-          if (frameIndex >= numFrames) {
-            clearInterval(frameInterval);
-            setTimeout(() => {
-              mediaRecorder.stop();
-              setIsRecording(false);
-            }, 100);
-          }
-        }, 1000 / fps);
-      } catch (error) {
-        console.error("Error in downloadWebM:", error);
-        setIsRecording(false);
-        reject(error);
-      }
-    });
+    // Record both videos sequentially
+    try {
+      // Record stimulus version (everything is blue ball, occlusion works)
+      // disguiseDistractors = true, liftUpTarget = false
+      await recordVideo(
+        { disguiseDistractors: true, liftUpTarget: false },
+        `${trial_name}_stimulus.webm`
+      );
+      
+      // Small delay to ensure recording state is reset
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Record revealed version (un-occluded, distractor balls with non-disguised colors)
+      // disguiseDistractors = false, liftUpTarget = true
+      await recordVideo(
+        { disguiseDistractors: false, liftUpTarget: true },
+        `${trial_name}_revealed.webm`
+      );
+    } catch (error) {
+      console.error("Error in downloadWebM:", error);
+      setIsRecording(false);
+      throw error;
+    }
   };
 
   // Expose downloadWebM function to parent component
