@@ -15,19 +15,20 @@ function App() {
   const [simData, setSimData] = useState(null); // State to hold the simulation data
   const videoPlayerRef = useRef(null); // Ref for VideoPlayer component
 
-  // Mode state (regular or hallucination)
-  const [mode, setMode] = useState("regular"); // "regular" or "hallucination"
+  // Mode state (regular or distractor)
+  const [mode, setMode] = useState("regular"); // "regular" or "distractor"
   
-  // Hallucination mode states
-  const [keyHallucinations, setKeyHallucinations] = useState([]); // Array of key hallucinations
-  const [randomHallucinationParams, setRandomHallucinationParams] = useState({
+  // Distractor mode states
+  const [keyDistractors, setKeyDistractors] = useState([]); // Array of key distractors
+  const [randomDistractorParams, setRandomDistractorParams] = useState({
     probability: 0.1,
     seed: 42,
     duration: 1.0,
-    maxActive: 5
+    maxActive: 5,
+    startDelay: 0.333  // Delay in seconds before first random distractor (default: ~10 frames at 30fps)
   });
-  const [isAddingKeyHallucination, setIsAddingKeyHallucination] = useState(false);
-  const [editingHallucinationIndex, setEditingHallucinationIndex] = useState(null);
+  const [isAddingKeyDistractor, setIsAddingKeyDistractor] = useState(false);
+  const [editingDistractorIndex, setEditingDistractorIndex] = useState(null);
   const [selectedFrame, setSelectedFrame] = useState(0);
 
   // Track when to auto-simulate
@@ -63,14 +64,14 @@ function App() {
   const entityHeight = 1;
   const entityWidth = 1;
 
-  // Auto-simulate when keyHallucinations change (for add/edit/delete operations)
+  // Auto-simulate when keyDistractors change (for add/edit/delete operations)
   useEffect(() => {
     if (shouldAutoSimulate && entities.length > 0) {
       handleSimulate(true);
       setShouldAutoSimulate(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyHallucinations, shouldAutoSimulate, entities]);
+  }, [keyDistractors, shouldAutoSimulate, entities]);
 
   const addEntity = (type) => {
     const existingTarget = entities.some((e) => e.type === "target");
@@ -240,15 +241,16 @@ function App() {
     setEntities([]);
     setSimData(null);
     setContextMenu({ visible: false, x: 0, y: 0, entityId: null });
-    // Clear hallucination data
-    setKeyHallucinations([]);
-    setRandomHallucinationParams({
+    // Clear distractor data
+    setKeyDistractors([]);
+    setRandomDistractorParams({
       probability: 0.1,
       seed: 42,
       duration: 1.0,
-      maxActive: 5
+      maxActive: 5,
+      startDelay: 0.333
     });
-    setIsAddingKeyHallucination(false);
+    setIsAddingKeyDistractor(false);
   };
 
   const handleContextMenu = (e, entityId) => {
@@ -296,21 +298,21 @@ function App() {
       }
     }
 
-    // Check key hallucination balls if in hallucination mode
-    if (mode === "hallucination" && keyHallucinations.length > 0) {
-      // Assume hallucination balls have the same size as target balls
+    // Check key distractor balls if in distractor mode
+    if (mode === "distractor" && keyDistractors.length > 0) {
+      // Assume distractor balls have the same size as target balls
       const ballRadius = targets.length > 0 ? targets[0].width / 2 : 0.5; // Default to 0.5 if no targets
       
-      for (let i = 0; i < keyHallucinations.length; i++) {
-        const halluc = keyHallucinations[i];
-        const ballCenterX = halluc.x;
-        const ballCenterY = halluc.y;
+      for (let i = 0; i < keyDistractors.length; i++) {
+        const distractor = keyDistractors[i];
+        const ballCenterX = distractor.x;
+        const ballCenterY = distractor.y;
         
         for (const barrier of barriers) {
           if (checkCircleRectangleCollision(ballCenterX, ballCenterY, ballRadius, barrier.x, barrier.y, barrier.width, barrier.height)) {
             return {
               valid: false,
-              message: `Cannot simulate: Key hallucination at frame ${halluc.startFrame} is placed inside or overlapping a barrier. Please move it to a valid position.`
+              message: `Cannot simulate: Key distractor at frame ${distractor.startFrame} is placed inside or overlapping a barrier. Please move it to a valid position.`
             };
           }
         }
@@ -342,11 +344,11 @@ function App() {
       },
     };
 
-    // Add hallucination parameters if in hallucination mode
-    if (mode === "hallucination") {
-      requestBody.hallucinationParams = {
-        keyHallucinations,
-        randomHallucinationParams
+    // Add distractor parameters if in distractor mode
+    if (mode === "distractor") {
+      requestBody.distractorParams = {
+        keyDistractors,
+        randomDistractorParams
       };
     }
 
@@ -400,25 +402,26 @@ function App() {
           try {
             const parsedData = JSON.parse(e.target.result);
             
-            // Handle both old format (array) and new format (object with entities + hallucination data)
+            // Handle both old format (array) and new format (object with entities + distractor data)
             let parsedEntities;
-            let hasHallucinationData = false;
+            let hasDistractorData = false;
             
             if (Array.isArray(parsedData)) {
               // Old format - just entities
               parsedEntities = parsedData;
             } else if (parsedData.entities) {
-              // New format - entities + optional hallucination data
+              // New format - entities + optional distractor data
               parsedEntities = parsedData.entities;
               
-              if (parsedData.hallucinationData) {
-                hasHallucinationData = true;
-                // Load hallucination data
-                if (parsedData.hallucinationData.keyHallucinations) {
-                  setKeyHallucinations(parsedData.hallucinationData.keyHallucinations);
+              if (parsedData.distractorData || parsedData.hallucinationData) {
+                hasDistractorData = true;
+                // Load distractor data (handle both new and old key names for backward compatibility)
+                const distractorData = parsedData.distractorData || parsedData.hallucinationData;
+                if (distractorData.keyDistractors || distractorData.keyHallucinations) {
+                  setKeyDistractors(distractorData.keyDistractors || distractorData.keyHallucinations);
                 }
-                if (parsedData.hallucinationData.randomHallucinationParams) {
-                  setRandomHallucinationParams(parsedData.hallucinationData.randomHallucinationParams);
+                if (distractorData.randomDistractorParams || distractorData.randomHallucinationParams) {
+                  setRandomDistractorParams(distractorData.randomDistractorParams || distractorData.randomHallucinationParams);
                 }
               }
             } else {
@@ -436,18 +439,19 @@ function App() {
                 setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
               }
               
-              // Auto-switch mode based on hallucination data
-              if (hasHallucinationData && mode === "regular") {
-                setMode("hallucination");
-              } else if (!hasHallucinationData && mode === "hallucination") {
+              // Auto-switch mode based on distractor data
+              if (hasDistractorData && mode === "regular") {
+                setMode("distractor");
+              } else if (!hasDistractorData && mode === "distractor") {
                 setMode("regular");
-                // Clear hallucination data when switching to regular mode
-                setKeyHallucinations([]);
-                setRandomHallucinationParams({
+                // Clear distractor data when switching to regular mode
+                setKeyDistractors([]);
+                setRandomDistractorParams({
                   probability: 0.1,
                   seed: 42,
                   duration: 1.0,
-                  maxActive: 5
+                  maxActive: 5,
+                  startDelay: 0.333
                 });
               }
               
@@ -504,10 +508,10 @@ function App() {
           entities: entities
         };
         
-        if (mode === "hallucination" && (keyHallucinations.length > 0 || randomHallucinationParams.probability > 0)) {
-          initStateData.hallucinationData = {
-            keyHallucinations,
-            randomHallucinationParams
+        if (mode === "distractor" && (keyDistractors.length > 0 || randomDistractorParams.probability > 0)) {
+          initStateData.distractorData = {
+            keyDistractors,
+            randomDistractorParams
           };
         }
         
@@ -589,15 +593,15 @@ function App() {
       // Create trial directory
       const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
       
-      // Prepare init state data (entities + hallucination data if in hallucination mode)
+      // Prepare init state data (entities + distractor data if in distractor mode)
       const initStateData = {
         entities: entities
       };
       
-      if (mode === "hallucination" && (keyHallucinations.length > 0 || randomHallucinationParams.probability > 0)) {
-        initStateData.hallucinationData = {
-          keyHallucinations,
-          randomHallucinationParams
+      if (mode === "distractor" && (keyDistractors.length > 0 || randomDistractorParams.probability > 0)) {
+        initStateData.distractorData = {
+          keyDistractors,
+          randomDistractorParams
         };
       }
       
@@ -638,10 +642,10 @@ function App() {
           entities: entities
         };
         
-        if (mode === "hallucination" && (keyHallucinations.length > 0 || randomHallucinationParams.probability > 0)) {
-          initStateData.hallucinationData = {
-            keyHallucinations,
-            randomHallucinationParams
+        if (mode === "distractor" && (keyDistractors.length > 0 || randomDistractorParams.probability > 0)) {
+          initStateData.distractorData = {
+            keyDistractors,
+            randomDistractorParams
           };
         }
         
@@ -728,12 +732,12 @@ function App() {
             Regular Mode
           </button>
           <button
-            onClick={() => setMode("hallucination")}
+            onClick={() => setMode("distractor")}
             style={{
-              background: mode === "hallucination" 
+              background: mode === "distractor" 
                 ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" 
                 : "linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)",
-              color: mode === "hallucination" ? "white" : "#6b7280",
+              color: mode === "distractor" ? "white" : "#6b7280",
               padding: "8px 16px",
               borderRadius: "6px",
               border: "none",
@@ -741,12 +745,12 @@ function App() {
               fontWeight: "600",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              boxShadow: mode === "hallucination" 
+              boxShadow: mode === "distractor" 
                 ? "0 2px 8px rgba(139, 92, 246, 0.3)" 
                 : "0 2px 4px rgba(0, 0, 0, 0.1)"
             }}
           >
-            Hallucination Mode
+            Distractor Mode
           </button>
         </div>
       </div>
@@ -1084,8 +1088,8 @@ function App() {
             </div>
           </div>
 
-          {/* Hallucination Controls - Only show in hallucination mode */}
-          {mode === "hallucination" && (
+          {/* Distractor Controls - Only show in distractor mode */}
+          {mode === "distractor" && (
             <div style={{ 
               background: "linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)", 
               padding: '24px', 
@@ -1100,10 +1104,10 @@ function App() {
                 color: '#6b21a8',
                 letterSpacing: '-0.025em'
               }}>
-                Hallucination Controls
+                Distractor Controls
               </h3>
               
-              {/* Key Hallucination Section */}
+              {/* Key Distractor Section */}
               <div style={{ marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid #e9d5ff' }}>
                 <h4 style={{ 
                   margin: '0 0 12px 0', 
@@ -1111,15 +1115,15 @@ function App() {
                   fontWeight: '600', 
                   color: '#7c3aed'
                 }}>
-                  Key Hallucination
+                  Key Distractor
                 </h4>
                 
                 <button
-                  onClick={() => setIsAddingKeyHallucination(!isAddingKeyHallucination)}
+                  onClick={() => setIsAddingKeyDistractor(!isAddingKeyDistractor)}
                   disabled={!simData}
                   style={{
                     width: '100%',
-                    background: isAddingKeyHallucination 
+                    background: isAddingKeyDistractor 
                       ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
                       : "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                     color: "white",
@@ -1135,10 +1139,10 @@ function App() {
                     opacity: simData ? 1 : 0.5
                   }}
                 >
-                  {isAddingKeyHallucination ? "❌ Cancel Adding" : "➕ Add Key Hallucination"}
+                  {isAddingKeyDistractor ? "❌ Cancel Adding" : "➕ Add Key Distractor"}
                 </button>
                 
-                {keyHallucinations.length > 0 && (
+                {keyDistractors.length > 0 && (
                   <div style={{ marginTop: '12px' }}>
                     <div style={{ 
                       fontSize: '12px', 
@@ -1146,9 +1150,9 @@ function App() {
                       fontWeight: '600',
                       marginBottom: '8px'
                     }}>
-                      Active Key Hallucinations: {keyHallucinations.length}
+                      Active Key Distractors: {keyDistractors.length}
                     </div>
-                    {keyHallucinations.map((halluc, index) => (
+                    {keyDistractors.map((distractor, index) => (
                       <div 
                         key={index}
                         style={{
@@ -1156,7 +1160,7 @@ function App() {
                           backgroundColor: 'white',
                           borderRadius: '6px',
                           marginBottom: '6px',
-                          border: editingHallucinationIndex === index ? '2px solid #8b5cf6' : '1px solid #e9d5ff',
+                          border: editingDistractorIndex === index ? '2px solid #8b5cf6' : '1px solid #e9d5ff',
                           fontSize: '11px',
                           color: '#6b7280',
                           display: 'flex',
@@ -1165,13 +1169,13 @@ function App() {
                         }}
                       >
                         <span>
-                          Frame {halluc.startFrame} • {halluc.duration}s • {halluc.speed?.toFixed(1) || '3.6'} d/s
+                          Frame {distractor.startFrame} • {distractor.duration}s • {distractor.speed?.toFixed(1) || '3.6'} d/s
                         </span>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           <button
                             onClick={() => {
-                              setEditingHallucinationIndex(index);
-                              setIsAddingKeyHallucination(true);
+                              setEditingDistractorIndex(index);
+                              setIsAddingKeyDistractor(true);
                             }}
                             style={{
                               background: '#8b5cf6',
@@ -1188,10 +1192,10 @@ function App() {
                           </button>
                           <button
                             onClick={() => {
-                              setKeyHallucinations(keyHallucinations.filter((_, i) => i !== index));
-                              if (editingHallucinationIndex === index) {
-                                setEditingHallucinationIndex(null);
-                                setIsAddingKeyHallucination(false);
+                              setKeyDistractors(keyDistractors.filter((_, i) => i !== index));
+                              if (editingDistractorIndex === index) {
+                                setEditingDistractorIndex(null);
+                                setIsAddingKeyDistractor(false);
                               }
                               // Trigger auto-simulate after deleting
                               setShouldAutoSimulate(true);
@@ -1216,7 +1220,7 @@ function App() {
                 )}
               </div>
               
-              {/* Random Hallucination Parameters */}
+              {/* Random Distractor Parameters */}
               <div>
                 <h4 style={{ 
                   margin: '0 0 12px 0', 
@@ -1224,8 +1228,49 @@ function App() {
                   fontWeight: '600', 
                   color: '#7c3aed'
                 }}>
-                  Random Hallucinations
+                  Random Distractors
                 </h4>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#6b21a8', 
+                    marginBottom: '6px'
+                  }}>
+                    Start Delay (seconds)
+                  </label>
+                  <input
+                    type="number"
+                    value={randomDistractorParams.startDelay}
+                    onChange={(e) => setRandomDistractorParams({
+                      ...randomDistractorParams,
+                      startDelay: parseFloat(e.target.value)
+                    })}
+                    min="0"
+                    step="0.1"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '2px solid #e9d5ff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937'
+                    }}
+                  />
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#9ca3af', 
+                    marginTop: '4px' 
+                  }}>
+                    Delay before first random distractor appears
+                  </div>
+                </div>
                 
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ 
@@ -1239,9 +1284,9 @@ function App() {
                   </label>
                   <input
                     type="number"
-                    value={randomHallucinationParams.probability}
-                    onChange={(e) => setRandomHallucinationParams({
-                      ...randomHallucinationParams,
+                    value={randomDistractorParams.probability}
+                    onChange={(e) => setRandomDistractorParams({
+                      ...randomDistractorParams,
                       probability: parseFloat(e.target.value)
                     })}
                     min="0"
@@ -1274,9 +1319,9 @@ function App() {
                   </label>
                   <input
                     type="number"
-                    value={randomHallucinationParams.seed}
-                    onChange={(e) => setRandomHallucinationParams({
-                      ...randomHallucinationParams,
+                    value={randomDistractorParams.seed}
+                    onChange={(e) => setRandomDistractorParams({
+                      ...randomDistractorParams,
                       seed: parseInt(e.target.value)
                     })}
                     style={{
@@ -1306,9 +1351,9 @@ function App() {
                   </label>
                   <input
                     type="number"
-                    value={randomHallucinationParams.duration}
-                    onChange={(e) => setRandomHallucinationParams({
-                      ...randomHallucinationParams,
+                    value={randomDistractorParams.duration}
+                    onChange={(e) => setRandomDistractorParams({
+                      ...randomDistractorParams,
                       duration: parseFloat(e.target.value)
                     })}
                     min="0.1"
@@ -1336,13 +1381,13 @@ function App() {
                     color: '#6b21a8', 
                     marginBottom: '6px'
                   }}>
-                    Max Active Hallucinations
+                    Max Active Distractors
                   </label>
                   <input
                     type="number"
-                    value={randomHallucinationParams.maxActive}
-                    onChange={(e) => setRandomHallucinationParams({
-                      ...randomHallucinationParams,
+                    value={randomDistractorParams.maxActive}
+                    onChange={(e) => setRandomDistractorParams({
+                      ...randomDistractorParams,
                       maxActive: parseInt(e.target.value)
                     })}
                     min="1"
@@ -1515,24 +1560,24 @@ function App() {
                 worldWidth={worldWidth}
                 worldHeight={worldHeight}
                 mode={mode}
-                isAddingKeyHallucination={isAddingKeyHallucination}
-                setIsAddingKeyHallucination={setIsAddingKeyHallucination}
+                isAddingKeyDistractor={isAddingKeyDistractor}
+                setIsAddingKeyDistractor={setIsAddingKeyDistractor}
                 selectedFrame={selectedFrame}
                 setSelectedFrame={setSelectedFrame}
-                keyHallucinations={keyHallucinations}
-                editingHallucinationIndex={editingHallucinationIndex}
-                onAddKeyHallucination={(hallucinationData) => {
-                  if (editingHallucinationIndex !== null) {
-                    // Update existing hallucination
-                    const updated = [...keyHallucinations];
-                    updated[editingHallucinationIndex] = hallucinationData;
-                    setKeyHallucinations(updated);
-                    setEditingHallucinationIndex(null);
+                keyDistractors={keyDistractors}
+                editingDistractorIndex={editingDistractorIndex}
+                onAddKeyDistractor={(distractorData) => {
+                  if (editingDistractorIndex !== null) {
+                    // Update existing distractor
+                    const updated = [...keyDistractors];
+                    updated[editingDistractorIndex] = distractorData;
+                    setKeyDistractors(updated);
+                    setEditingDistractorIndex(null);
                   } else {
-                    // Add new hallucination
-                    setKeyHallucinations([...keyHallucinations, hallucinationData]);
+                    // Add new distractor
+                    setKeyDistractors([...keyDistractors, distractorData]);
                   }
-                  setIsAddingKeyHallucination(false);
+                  setIsAddingKeyDistractor(false);
                   // Trigger auto-simulate after state updates
                   setShouldAutoSimulate(true);
                 }}

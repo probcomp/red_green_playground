@@ -9,13 +9,13 @@ const VideoPlayer = forwardRef(({
   worldWidth, 
   worldHeight,
   mode = "regular",
-  isAddingKeyHallucination = false,
-  setIsAddingKeyHallucination = () => {},
+  isAddingKeyDistractor = false,
+  setIsAddingKeyDistractor = () => {},
   selectedFrame = 0,
   setSelectedFrame = () => {},
-  keyHallucinations = [],
-  editingHallucinationIndex = null,
-  onAddKeyHallucination = () => {}
+  keyDistractors = [],
+  editingDistractorIndex = null,
+  onAddKeyDistractor = () => {}
 }, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -24,13 +24,13 @@ const VideoPlayer = forwardRef(({
   const animationRef = useRef(null);
   const lastFrameTime = useRef(0);
   
-  // Hallucination mode states
-  const [hallucinationDirection, setHallucinationDirection] = useState(0);
-  const [hallucinationDuration, setHallucinationDuration] = useState(1.0);
-  const [hallucinationSpeed, setHallucinationSpeed] = useState(3.6);
-  const [hallucinationPosition, setHallucinationPosition] = useState(null);
-  const [isDraggingHallucDirection, setIsDraggingHallucDirection] = useState(false);
-  const [disguiseHallucinations, setDisguiseHallucinations] = useState(false);
+  // Distractor mode states
+  const [distractorDirection, setDistractorDirection] = useState(0);
+  const [distractorDuration, setDistractorDuration] = useState(1.0);
+  const [distractorSpeed, setDistractorSpeed] = useState(3.6);
+  const [distractorPosition, setDistractorPosition] = useState(null);
+  const [isDraggingDistractorDirection, setIsDraggingDistractorDirection] = useState(false);
+  const [disguiseDistractors, setDisguiseDistractors] = useState(false);
   const [liftUpTarget, setLiftUpTarget] = useState(false);
 
   // Extract dimensions from simData
@@ -241,12 +241,12 @@ const VideoPlayer = forwardRef(({
             }
           };
 
-          // Render hallucinations (key and random) before occluders if not lifted and revealed
-          if (!(liftUpTarget && !disguiseHallucinations)) {
-            if (simData.key_hallucinations) {
-              simData.key_hallucinations.forEach(halluc => {
-                if (halluc.step_data && halluc.step_data[frameIndex]) {
-                  const halData = halluc.step_data[frameIndex];
+          // Render distractors (key and random) before occluders if not lifted and revealed
+          if (!(liftUpTarget && !disguiseDistractors)) {
+            if (simData.key_distractors) {
+              simData.key_distractors.forEach(distractor => {
+                if (distractor.step_data && distractor.step_data[frameIndex]) {
+                  const halData = distractor.step_data[frameIndex];
                   const targetSize = simData.target.size;
                   const radius = targetSize / 2;
                   const tx = halData.x;
@@ -256,7 +256,7 @@ const VideoPlayer = forwardRef(({
                   const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
                   const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-                  tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+                  tempCtx.fillStyle = disguiseDistractors ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
                   tempCtx.beginPath();
                   tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
                   tempCtx.fill();
@@ -264,10 +264,10 @@ const VideoPlayer = forwardRef(({
               });
             }
 
-            if (simData.random_hallucinations) {
-              simData.random_hallucinations.forEach(halluc => {
-                if (halluc.step_data && halluc.step_data[frameIndex]) {
-                  const halData = halluc.step_data[frameIndex];
+            if (simData.random_distractors) {
+              simData.random_distractors.forEach(distractor => {
+                if (distractor.step_data && distractor.step_data[frameIndex]) {
+                  const halData = distractor.step_data[frameIndex];
                   const targetSize = simData.target.size;
                   const radius = targetSize / 2;
                   const tx = halData.x;
@@ -277,7 +277,7 @@ const VideoPlayer = forwardRef(({
                   const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
                   const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-                  tempCtx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+                  tempCtx.fillStyle = disguiseDistractors ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
                   tempCtx.beginPath();
                   tempCtx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
                   tempCtx.fill();
@@ -309,12 +309,12 @@ const VideoPlayer = forwardRef(({
             renderTargetTemp(true);
           }
           
-          // Render hallucinations after occluders if lifted and revealed
-          if (liftUpTarget && !disguiseHallucinations) {
-            if (simData.key_hallucinations) {
-              simData.key_hallucinations.forEach(halluc => {
-                if (halluc.step_data && halluc.step_data[frameIndex]) {
-                  const halData = halluc.step_data[frameIndex];
+          // Render distractors after occluders if lifted and revealed
+          if (liftUpTarget && !disguiseDistractors) {
+            if (simData.key_distractors) {
+              simData.key_distractors.forEach(distractor => {
+                if (distractor.step_data && distractor.step_data[frameIndex]) {
+                  const halData = distractor.step_data[frameIndex];
                   const targetSize = simData.target.size;
                   const radius = targetSize / 2;
                   const tx = halData.x;
@@ -324,7 +324,7 @@ const VideoPlayer = forwardRef(({
                   const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
                   const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-                  // Check if hallucination is under an occluder when lifted and revealed
+                  // Check if distractor is under an occluder when lifted and revealed
                   let underOccluder = false;
                   for (const occluder of simData.occluders) {
                     if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
@@ -352,10 +352,10 @@ const VideoPlayer = forwardRef(({
               });
             }
 
-            if (simData.random_hallucinations) {
-              simData.random_hallucinations.forEach(halluc => {
-                if (halluc.step_data && halluc.step_data[frameIndex]) {
-                  const halData = halluc.step_data[frameIndex];
+            if (simData.random_distractors) {
+              simData.random_distractors.forEach(distractor => {
+                if (distractor.step_data && distractor.step_data[frameIndex]) {
+                  const halData = distractor.step_data[frameIndex];
                   const targetSize = simData.target.size;
                   const radius = targetSize / 2;
                   const tx = halData.x;
@@ -365,7 +365,7 @@ const VideoPlayer = forwardRef(({
                   const canvasY = tempCanvas.height - ((ty + radius) * (tempCanvas.height / simWorldHeight));
                   const canvasRadius = radius * (tempCanvas.width / simWorldWidth);
 
-                  // Check if hallucination is under an occluder when lifted and revealed
+                  // Check if distractor is under an occluder when lifted and revealed
                   let underOccluder = false;
                   for (const occluder of simData.occluders) {
                     if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
@@ -520,12 +520,12 @@ const VideoPlayer = forwardRef(({
         }
       };
 
-      // Render hallucinations (key and random) before occluders if not lifted and revealed
-      if (!(liftUpTarget && !disguiseHallucinations)) {
-        if (simData.key_hallucinations) {
-          simData.key_hallucinations.forEach(halluc => {
-            if (halluc.step_data && halluc.step_data[frameIndex]) {
-              const halData = halluc.step_data[frameIndex];
+      // Render distractors (key and random) before occluders if not lifted and revealed
+      if (!(liftUpTarget && !disguiseDistractors)) {
+        if (simData.key_distractors) {
+          simData.key_distractors.forEach(distractor => {
+            if (distractor.step_data && distractor.step_data[frameIndex]) {
+              const halData = distractor.step_data[frameIndex];
               const targetSize = simData.target.size;
               const radius = targetSize / 2;
               const tx = halData.x;
@@ -535,7 +535,7 @@ const VideoPlayer = forwardRef(({
               const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
               const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-              ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
+              ctx.fillStyle = disguiseDistractors ? 'rgb(0, 0, 255)' : 'rgb(138, 43, 226)';
               ctx.beginPath();
               ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
               ctx.fill();
@@ -543,10 +543,10 @@ const VideoPlayer = forwardRef(({
           });
         }
 
-        if (simData.random_hallucinations) {
-          simData.random_hallucinations.forEach(halluc => {
-            if (halluc.step_data && halluc.step_data[frameIndex]) {
-              const halData = halluc.step_data[frameIndex];
+        if (simData.random_distractors) {
+          simData.random_distractors.forEach(distractor => {
+            if (distractor.step_data && distractor.step_data[frameIndex]) {
+              const halData = distractor.step_data[frameIndex];
               const targetSize = simData.target.size;
               const radius = targetSize / 2;
               const tx = halData.x;
@@ -556,7 +556,7 @@ const VideoPlayer = forwardRef(({
               const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
               const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-              ctx.fillStyle = disguiseHallucinations ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
+              ctx.fillStyle = disguiseDistractors ? 'rgb(0, 0, 255)' : 'rgb(255, 105, 180)';
               ctx.beginPath();
               ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
               ctx.fill();
@@ -588,12 +588,12 @@ const VideoPlayer = forwardRef(({
         renderTarget(true);
       }
       
-      // Render hallucinations after occluders if lifted and revealed
-      if (liftUpTarget && !disguiseHallucinations) {
-        if (simData.key_hallucinations) {
-          simData.key_hallucinations.forEach(halluc => {
-            if (halluc.step_data && halluc.step_data[frameIndex]) {
-              const halData = halluc.step_data[frameIndex];
+      // Render distractors after occluders if lifted and revealed
+      if (liftUpTarget && !disguiseDistractors) {
+        if (simData.key_distractors) {
+          simData.key_distractors.forEach(distractor => {
+            if (distractor.step_data && distractor.step_data[frameIndex]) {
+              const halData = distractor.step_data[frameIndex];
               const targetSize = simData.target.size;
               const radius = targetSize / 2;
               const tx = halData.x;
@@ -603,7 +603,7 @@ const VideoPlayer = forwardRef(({
               const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
               const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-              // Check if hallucination is under an occluder when lifted and revealed
+              // Check if distractor is under an occluder when lifted and revealed
               let underOccluder = false;
               for (const occluder of simData.occluders) {
                 if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
@@ -631,10 +631,10 @@ const VideoPlayer = forwardRef(({
           });
         }
 
-        if (simData.random_hallucinations) {
-          simData.random_hallucinations.forEach(halluc => {
-            if (halluc.step_data && halluc.step_data[frameIndex]) {
-              const halData = halluc.step_data[frameIndex];
+        if (simData.random_distractors) {
+          simData.random_distractors.forEach(distractor => {
+            if (distractor.step_data && distractor.step_data[frameIndex]) {
+              const halData = distractor.step_data[frameIndex];
               const targetSize = simData.target.size;
               const radius = targetSize / 2;
               const tx = halData.x;
@@ -644,7 +644,7 @@ const VideoPlayer = forwardRef(({
               const canvasY = canvasHeight - ((ty + radius) * (canvasHeight / simWorldHeight));
               const canvasRadius = radius * (canvasWidth / simWorldWidth);
 
-              // Check if hallucination is under an occluder when lifted and revealed
+              // Check if distractor is under an occluder when lifted and revealed
               let underOccluder = false;
               for (const occluder of simData.occluders) {
                 if (tx + radius > occluder.x && tx < occluder.x + occluder.width &&
@@ -673,7 +673,7 @@ const VideoPlayer = forwardRef(({
         }
       }
       
-      // Note: Hallucination preview is now rendered via Rnd overlay components (not on canvas)
+      // Note: Distractor preview is now rendered via Rnd overlay components (not on canvas)
     };
 
     const animate = (timestamp) => {
@@ -709,32 +709,32 @@ const VideoPlayer = forwardRef(({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseHallucinations, liftUpTarget]);
+  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseDistractors, liftUpTarget]);
 
-  // Pre-populate editing interface when editing a hallucination
+  // Pre-populate editing interface when editing a distractor
   useEffect(() => {
-    if (editingHallucinationIndex !== null && keyHallucinations[editingHallucinationIndex]) {
-      const halluc = keyHallucinations[editingHallucinationIndex];
-      setHallucinationPosition({ x: halluc.x, y: halluc.y });
-      setHallucinationDirection(halluc.direction);
-      setHallucinationSpeed(halluc.speed || 3.6);
-      setHallucinationDuration(halluc.duration);
-      setCurrentFrame(halluc.startFrame);
+    if (editingDistractorIndex !== null && keyDistractors[editingDistractorIndex]) {
+      const distractor = keyDistractors[editingDistractorIndex];
+      setDistractorPosition({ x: distractor.x, y: distractor.y });
+      setDistractorDirection(distractor.direction);
+      setDistractorSpeed(distractor.speed || 3.6);
+      setDistractorDuration(distractor.duration);
+      setCurrentFrame(distractor.startFrame);
     }
-  }, [editingHallucinationIndex, keyHallucinations]);
+  }, [editingDistractorIndex, keyDistractors]);
 
-  // Auto-create initial hallucination position when "Add Key Hallucination" is clicked
+  // Auto-create initial distractor position when "Add Key Distractor" is clicked
   useEffect(() => {
-    if (isAddingKeyHallucination && !hallucinationPosition && editingHallucinationIndex === null) {
+    if (isAddingKeyDistractor && !distractorPosition && editingDistractorIndex === null) {
       // Set initial position to center of scene (convert from center to bottom-left)
       const radius = simData.target.size / 2;
       const centerX = simWorldWidth / 2 - radius;
       const centerY = simWorldHeight / 2 - radius;
-      setHallucinationPosition({ x: centerX, y: centerY });
-      setHallucinationDirection(0);
+      setDistractorPosition({ x: centerX, y: centerY });
+      setDistractorDirection(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAddingKeyHallucination, editingHallucinationIndex]);
+  }, [isAddingKeyDistractor, editingDistractorIndex]);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -743,13 +743,13 @@ const VideoPlayer = forwardRef(({
   const handleSeek = (e) => {
     const seekPosition = parseInt(e.target.value);
     setCurrentFrame(seekPosition);
-    if (mode === "hallucination") {
+    if (mode === "distractor") {
       setSelectedFrame(seekPosition);
     }
   };
 
   const handleCanvasClick = (e) => {
-    if (!isAddingKeyHallucination) return;
+    if (!isAddingKeyDistractor) return;
     
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -768,30 +768,30 @@ const VideoPlayer = forwardRef(({
     const worldX = centerWorldX - radius;
     const worldY = centerWorldY - radius;
     
-    // Update hallucination position
-    setHallucinationPosition({ x: worldX, y: worldY });
+    // Update distractor position
+    setDistractorPosition({ x: worldX, y: worldY });
   };
 
-  const handleConfirmKeyHallucination = () => {
-    if (!hallucinationPosition) return;
+  const handleConfirmKeyDistractor = () => {
+    if (!distractorPosition) return;
     
-    const hallucinationData = {
+    const distractorData = {
       startFrame: currentFrame,
-      x: hallucinationPosition.x,
-      y: hallucinationPosition.y,
-      direction: hallucinationDirection,
-      duration: hallucinationDuration,
-      speed: hallucinationSpeed
+      x: distractorPosition.x,
+      y: distractorPosition.y,
+      direction: distractorDirection,
+      duration: distractorDuration,
+      speed: distractorSpeed
     };
     
-    onAddKeyHallucination(hallucinationData);
-    setHallucinationPosition(null);
-    setHallucinationDirection(0);
+    onAddKeyDistractor(distractorData);
+    setDistractorPosition(null);
+    setDistractorDirection(0);
   };
 
-  const handleCancelKeyHallucination = () => {
-    setHallucinationPosition(null);
-    setHallucinationDirection(0);
+  const handleCancelKeyDistractor = () => {
+    setDistractorPosition(null);
+    setDistractorDirection(0);
   }; 
 
   if (!simData) {
@@ -839,20 +839,20 @@ const VideoPlayer = forwardRef(({
           width: `${displayWidth}px`,
           height: `${displayHeight}px`,
           objectFit: 'contain',
-            border: isAddingKeyHallucination ? '3px solid #8b5cf6' : '3px solid #1e293b',
+            border: isAddingKeyDistractor ? '3px solid #8b5cf6' : '3px solid #1e293b',
           borderRadius: '0px',
           boxSizing: 'border-box',
           imageRendering: 'pixelated',
-            boxShadow: isAddingKeyHallucination 
+            boxShadow: isAddingKeyDistractor 
               ? "0 0 0 4px rgba(139, 92, 246, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.1)" 
               : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
             backgroundColor: "#ffffff",
-            cursor: isAddingKeyHallucination ? 'crosshair' : 'default'
+            cursor: isAddingKeyDistractor ? 'crosshair' : 'default'
           }}
         />
         
-        {/* Key Hallucination Direction Control - Overlay on canvas */}
-        {isAddingKeyHallucination && hallucinationPosition && (
+        {/* Key Distractor Direction Control - Overlay on canvas */}
+        {isAddingKeyDistractor && distractorPosition && (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -872,10 +872,10 @@ const VideoPlayer = forwardRef(({
               const radius = simData.target.size / 2;
               const px_scale_x = displayWidth / simWorldWidth;
               const px_scale_y = displayHeight / simWorldHeight;
-              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
-              const lineEndX = centerX + hallucinationSpeed * px_scale_x * Math.cos(hallucinationDirection);
-              const lineEndY = centerY - hallucinationSpeed * px_scale_y * Math.sin(hallucinationDirection);
+              const centerX = (distractorPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((distractorPosition.y + radius) * px_scale_y);
+              const lineEndX = centerX + distractorSpeed * px_scale_x * Math.cos(distractorDirection);
+              const lineEndY = centerY - distractorSpeed * px_scale_y * Math.sin(distractorDirection);
               
               return (
                 <line
@@ -902,8 +902,8 @@ const VideoPlayer = forwardRef(({
               const radius = simData.target.size / 2;
               const px_scale_x = displayWidth / simWorldWidth;
               const px_scale_y = displayHeight / simWorldHeight;
-              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
+              const centerX = (distractorPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((distractorPosition.y + radius) * px_scale_y);
               const ballSizePx = radius * 2 * px_scale_x;
               return {
                 x: centerX - ballSizePx / 2,
@@ -923,7 +923,7 @@ const VideoPlayer = forwardRef(({
               const worldX = (centerX / px_scale_x) - radius;
               const worldY = ((displayHeight - centerY) / px_scale_y) - radius;
               
-              setHallucinationPosition({ x: worldX, y: worldY });
+              setDistractorPosition({ x: worldX, y: worldY });
             }}
             enableResizing={false}
             style={{
@@ -951,29 +951,29 @@ const VideoPlayer = forwardRef(({
               const radius = simData.target.size / 2;
               const px_scale_x = displayWidth / simWorldWidth;
               const px_scale_y = displayHeight / simWorldHeight;
-              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
-              const lineEndX = centerX + hallucinationSpeed * px_scale_x * Math.cos(hallucinationDirection);
-              const lineEndY = centerY - hallucinationSpeed * px_scale_y * Math.sin(hallucinationDirection);
+              const centerX = (distractorPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((distractorPosition.y + radius) * px_scale_y);
+              const lineEndX = centerX + distractorSpeed * px_scale_x * Math.cos(distractorDirection);
+              const lineEndY = centerY - distractorSpeed * px_scale_y * Math.sin(distractorDirection);
               return {
                 x: lineEndX - (displayWidth / simWorldWidth) / 2,
                 y: lineEndY - (displayWidth / simWorldWidth) / 2
               };
             })()}
             bounds="parent"
-            onDragStart={() => setIsDraggingHallucDirection(true)}
+            onDragStart={() => setIsDraggingDistractorDirection(true)}
             onDragStop={(e, d) => {
-              setIsDraggingHallucDirection(false);
+              setIsDraggingDistractorDirection(false);
               const radius = simData.target.size / 2;
               const px_scale_x = displayWidth / simWorldWidth;
               const px_scale_y = displayHeight / simWorldHeight;
-              const centerX = (hallucinationPosition.x + radius) * px_scale_x;
-              const centerY = displayHeight - ((hallucinationPosition.y + radius) * px_scale_y);
+              const centerX = (distractorPosition.x + radius) * px_scale_x;
+              const centerY = displayHeight - ((distractorPosition.y + radius) * px_scale_y);
               
               const deltaX = (d.x + (displayWidth / simWorldWidth) / 2) - centerX;
               const deltaY = centerY - (d.y + (displayWidth / simWorldWidth) / 2);
               const newDirection = Math.atan2(deltaY, deltaX);
-              setHallucinationDirection(newDirection);
+              setDistractorDirection(newDirection);
             }}
             enableResizing={false}
             style={{
@@ -989,8 +989,8 @@ const VideoPlayer = forwardRef(({
         )}
       </div>
       
-      {/* Hallucination Configuration Controls */}
-      {isAddingKeyHallucination && hallucinationPosition && (
+      {/* Distractor Configuration Controls */}
+      {isAddingKeyDistractor && distractorPosition && (
         <div style={{
           background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)',
           padding: '16px',
@@ -1005,7 +1005,7 @@ const VideoPlayer = forwardRef(({
             fontWeight: '700',
             color: '#6b21a8'
           }}>
-            {editingHallucinationIndex !== null ? 'Edit' : 'Configure'} Key Hallucination
+            {editingDistractorIndex !== null ? 'Edit' : 'Configure'} Key Distractor
           </h4>
           
           <div style={{ marginBottom: '12px' }}>
@@ -1016,7 +1016,7 @@ const VideoPlayer = forwardRef(({
               color: '#7c3aed',
               marginBottom: '4px'
             }}>
-              Frame: {currentFrame} | Position: ({hallucinationPosition.x.toFixed(2)}, {hallucinationPosition.y.toFixed(2)})
+              Frame: {currentFrame} | Position: ({distractorPosition.x.toFixed(2)}, {distractorPosition.y.toFixed(2)})
             </label>
           </div>
           
@@ -1033,8 +1033,8 @@ const VideoPlayer = forwardRef(({
               </label>
               <input
                 type="number"
-                value={(hallucinationDirection * 180 / Math.PI).toFixed(1)}
-                onChange={(e) => setHallucinationDirection(parseFloat(e.target.value || 0) * Math.PI / 180)}
+                value={(distractorDirection * 180 / Math.PI).toFixed(1)}
+                onChange={(e) => setDistractorDirection(parseFloat(e.target.value || 0) * Math.PI / 180)}
                 min="-180"
                 max="180"
                 step="1"
@@ -1061,8 +1061,8 @@ const VideoPlayer = forwardRef(({
               </label>
               <input
                 type="number"
-                value={hallucinationSpeed}
-                onChange={(e) => setHallucinationSpeed(parseFloat(e.target.value || 0))}
+                value={distractorSpeed}
+                onChange={(e) => setDistractorSpeed(parseFloat(e.target.value || 0))}
                 min="0.1"
                 step="0.1"
                 style={{
@@ -1088,8 +1088,8 @@ const VideoPlayer = forwardRef(({
               </label>
               <input
                 type="number"
-                value={hallucinationDuration}
-                onChange={(e) => setHallucinationDuration(parseFloat(e.target.value || 0))}
+                value={distractorDuration}
+                onChange={(e) => setDistractorDuration(parseFloat(e.target.value || 0))}
                 min="0.1"
                 step="0.1"
                 style={{
@@ -1106,7 +1106,7 @@ const VideoPlayer = forwardRef(({
           
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={handleCancelKeyHallucination}
+              onClick={handleCancelKeyDistractor}
               style={{
                 flex: 1,
                 padding: '8px',
@@ -1122,7 +1122,7 @@ const VideoPlayer = forwardRef(({
               Cancel
             </button>
             <button
-              onClick={handleConfirmKeyHallucination}
+              onClick={handleConfirmKeyDistractor}
               style={{
                 flex: 1,
                 padding: '8px',
@@ -1135,7 +1135,7 @@ const VideoPlayer = forwardRef(({
                 cursor: 'pointer'
               }}
             >
-              {editingHallucinationIndex !== null ? '✓ Update' : '✓ Confirm'}
+              {editingDistractorIndex !== null ? '✓ Update' : '✓ Confirm'}
             </button>
           </div>
         </div>
@@ -1244,7 +1244,7 @@ const VideoPlayer = forwardRef(({
               }} />
               <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>Target</span>
             </div>
-            {mode === "hallucination" && simData && (simData.key_hallucinations?.length > 0 || simData.random_hallucinations?.length > 0) && !disguiseHallucinations && (
+            {mode === "distractor" && simData && (simData.key_distractors?.length > 0 || simData.random_distractors?.length > 0) && !disguiseDistractors && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{
@@ -1269,11 +1269,11 @@ const VideoPlayer = forwardRef(({
           </div>
           
           {/* Disguise/Reveal Button */}
-          {mode === "hallucination" && simData && (simData.key_hallucinations?.length > 0 || simData.random_hallucinations?.length > 0) && (
+          {mode === "distractor" && simData && (simData.key_distractors?.length > 0 || simData.random_distractors?.length > 0) && (
             <button
-              onClick={() => setDisguiseHallucinations(!disguiseHallucinations)}
+              onClick={() => setDisguiseDistractors(!disguiseDistractors)}
               style={{
-                background: disguiseHallucinations 
+                background: disguiseDistractors 
                   ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
                   : "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 color: "white",
@@ -1288,7 +1288,7 @@ const VideoPlayer = forwardRef(({
                 whiteSpace: 'nowrap'
               }}
             >
-              {disguiseHallucinations ? "👁️ Reveal" : "🎭 Disguise"}
+              {disguiseDistractors ? "👁️ Reveal" : "🎭 Disguise"}
             </button>
           )}
           

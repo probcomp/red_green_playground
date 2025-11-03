@@ -68,24 +68,24 @@ def check_collision_with_ball(x1, y1, r1, x2, y2, r2):
     dist_sq = (x1 - x2)**2 + (y1 - y2)**2
     return dist_sq < (r1 + r2)**2
 
-def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, ballSpeed, elasticity, friction, space):
-    """Simulate a single key hallucination"""
-    startFrame = keyHalluc['startFrame']
-    x = keyHalluc['x']  # Bottom-left corner x
-    y = keyHalluc['y']  # Bottom-left corner y
-    direction = keyHalluc['direction']
-    duration = keyHalluc['duration']
-    halluc_speed = keyHalluc.get('speed', ballSpeed)  # Get speed from keyHalluc, default to ballSpeed
+def simulate_key_distractor(keyDistractor, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, ballSpeed, elasticity, friction, space):
+    """Simulate a single key distractor"""
+    startFrame = keyDistractor['startFrame']
+    x = keyDistractor['x']  # Bottom-left corner x
+    y = keyDistractor['y']  # Bottom-left corner y
+    direction = keyDistractor['direction']
+    duration = keyDistractor['duration']
+    distractor_speed = keyDistractor.get('speed', ballSpeed)  # Get speed from keyDistractor, default to ballSpeed
     
-    # Calculate number of frames for this hallucination
-    numHallucFrames = int(duration * FPS)
+    # Calculate number of frames for this distractor
+    numDistractorFrames = int(duration * FPS)
     
-    # Create a new pymunk space for this hallucination (to avoid interfering with main ball)
-    halluc_space = pymunk.Space()
-    halluc_space.gravity = (0, 0)
+    # Create a new pymunk space for this distractor (to avoid interfering with main ball)
+    distractor_space = pymunk.Space()
+    distractor_space.gravity = (0, 0)
     
     # Add walls
-    static_body = halluc_space.static_body
+    static_body = distractor_space.static_body
     walls = [
         pymunk.Segment(static_body, (0, 0), (worldWidth, 0), 0.01),
         pymunk.Segment(static_body, (0, 0), (0, worldHeight), 0.01),
@@ -95,7 +95,7 @@ def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIM
     for wall in walls:
         wall.elasticity = elasticity
         wall.friction = friction
-        halluc_space.add(wall)
+        distractor_space.add(wall)
     
     # Add barriers from sim_data
     for barrier in sim_data['barriers']:
@@ -104,76 +104,80 @@ def simulate_key_hallucination(keyHalluc, sim_data, worldWidth, worldHeight, TIM
         shape = pymunk.Poly.create_box(body, (barrier['width'], barrier['height']))
         shape.elasticity = elasticity
         shape.friction = friction
-        halluc_space.add(body, shape)
+        distractor_space.add(body, shape)
     
-    # Create hallucination ball
+    # Create distractor ball
     radius = sim_data['target']['size'] / 2
     mass = 1.0
     moment = pymunk.moment_for_circle(mass, 0, radius)
     body = pymunk.Body(mass, moment, body_type=pymunk.Body.DYNAMIC)
     # Convert bottom-left corner to center for pymunk body position
     body.position = (x + radius, y + radius)
-    # Scale velocity based on hallucination speed relative to main ball speed
-    # TIMESTEP is calibrated for ballSpeed, so velocity magnitude should be halluc_speed/ballSpeed
-    velocity_scale = halluc_speed / ballSpeed
+    # Scale velocity based on distractor speed relative to main ball speed
+    # TIMESTEP is calibrated for ballSpeed, so velocity magnitude should be distractor_speed/ballSpeed
+    velocity_scale = distractor_speed / ballSpeed
     vx, vy = velocity_scale * np.cos(direction), velocity_scale * np.sin(direction)
     body.velocity = (vx, vy)
     shape = pymunk.Circle(body, radius)
     shape.elasticity = elasticity
     shape.friction = friction
-    halluc_space.add(body, shape)
+    distractor_space.add(body, shape)
     
     # Simulate and record positions
-    halluc_data = {
+    distractor_data = {
         'startFrame': startFrame,
         'duration': duration,
         'step_data': {}
     }
     
-    for frame in range(numHallucFrames):
+    for frame in range(numDistractorFrames):
         if frame != 0:
             for _ in range(FRAME_INTERVAL):
-                halluc_space.step(TIMESTEP)
+                distractor_space.step(TIMESTEP)
         
         tx, ty = body.position.x - radius, body.position.y - radius
         global_frame = startFrame + frame
         
-        # No collision stopping for key hallucinations - they can overlap with the regular ball
-        halluc_data['step_data'][global_frame] = {
+        # No collision stopping for key distractors - they can overlap with the regular ball
+        distractor_data['step_data'][global_frame] = {
             'x': tx,
             'y': ty,
             'vx': body.velocity.x,
             'vy': body.velocity.y
         }
     
-    return halluc_data
+    return distractor_data
 
-def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, ballSpeed, elasticity, friction, space):
-    """Generate and simulate random hallucinations"""
+def generate_random_distractors(randomParams, sim_data, worldWidth, worldHeight, TIMESTEP, FRAME_INTERVAL, FPS, ballSpeed, elasticity, friction, space):
+    """Generate and simulate random distractors"""
     probability = randomParams['probability']
     seed = randomParams['seed']
     duration = randomParams['duration']
     maxActive = randomParams.get('maxActive', 5)  # Default to 5 if not specified
+    startDelay = randomParams.get('startDelay', 0.333)  # Default to ~10 frames at 30fps (0.333 seconds)
     
     np.random.seed(seed)
     
     radius = sim_data['target']['size'] / 2
     numFrames = sim_data['num_frames']
-    numHallucFrames = int(duration * FPS)
+    numDistractorFrames = int(duration * FPS)
     
-    random_hallucs = []
+    # Convert start delay from seconds to frames
+    startDelayFrames = int(startDelay * FPS)
     
-    # For each frame, potentially spawn a hallucination
+    random_distractors = []
+    
+    # For each frame, potentially spawn a distractor
     for frame in range(numFrames):
-        # Skip the first 10 frames - no random hallucinations in the beginning
-        if frame < 10:
+        # Skip frames before the start delay - no random distractors before this time
+        if frame < startDelayFrames:
             continue
         
-        # Count how many hallucinations are active at this frame
+        # Count how many distractors are active at this frame
         active_count = 0
-        for halluc in random_hallucs:
-            start = halluc['startFrame']
-            end = start + len(halluc['step_data'])
+        for distractor in random_distractors:
+            start = distractor['startFrame']
+            end = start + len(distractor['step_data'])
             if start <= frame < end:
                 active_count += 1
         
@@ -232,15 +236,15 @@ def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeig
             # Random direction (uniform)
             direction = np.random.uniform(-np.pi, np.pi)
             
-            # Simulate this random hallucination
-            halluc_data = simulate_key_hallucination(
+            # Simulate this random distractor
+            distractor_data = simulate_key_distractor(
                 {
                     'startFrame': frame,
                     'x': spawn_x,
                     'y': spawn_y,
                     'direction': direction,
                     'duration': duration,
-                    'speed': ballSpeed  # Random hallucinations use the same speed as main ball
+                    'speed': ballSpeed  # Random distractors use the same speed as main ball
                 },
                 sim_data,
                 worldWidth,
@@ -254,13 +258,13 @@ def generate_random_hallucinations(randomParams, sim_data, worldWidth, worldHeig
                 space
             )
             
-            random_hallucs.append(halluc_data)
-            print(f"Random hallucination spawned at frame {frame}")
+            random_distractors.append(distractor_data)
+            # print(f"Random distractor spawned at frame {frame}")
     
-    return random_hallucs
+    return random_distractors
 
 # Convert entities to Pymunk bodies and run simulation
-def run_simulation_with_visualization(entities, simulationParams, hallucinationParams=None):
+def run_simulation_with_visualization(entities, simulationParams, distractorParams=None):
     videoLength, ballSpeed, fps, physicsStepsPerFrame, res_multiplier, timestep, worldWidth, worldHeight = simulationParams
 
     # Calculate derived values
@@ -277,8 +281,8 @@ def run_simulation_with_visualization(entities, simulationParams, hallucinationP
         'step_data': {}, 
         'rg_hit_timestep': -1, 
         'rg_outcome': None,
-        'key_hallucinations': [],
-        'random_hallucinations': []
+        'key_distractors': [],
+        'random_distractors': []
     }
 
     # Pymunk simulation constants
@@ -456,16 +460,16 @@ def run_simulation_with_visualization(entities, simulationParams, hallucinationP
 
     sim_data['num_frames'] = frame+1 # this cannot be frames, because ball may hit red or green before the 
     
-    # Process hallucinations if provided
-    if hallucinationParams:
-        print("Processing hallucinations...")
+    # Process distractors if provided
+    if distractorParams:
+        print("Processing distractors...")
         
-        # Process key hallucinations
-        keyHallucinations = hallucinationParams.get('keyHallucinations', [])
-        for i, keyHalluc in enumerate(keyHallucinations):
-            print(f"Processing key hallucination {i+1}/{len(keyHallucinations)}")
-            halluc_data = simulate_key_hallucination(
-                keyHalluc, 
+        # Process key distractors
+        keyDistractors = distractorParams.get('keyDistractors', [])
+        for i, keyDistractor in enumerate(keyDistractors):
+            print(f"Processing key distractor {i+1}/{len(keyDistractors)}")
+            distractor_data = simulate_key_distractor(
+                keyDistractor, 
                 sim_data, 
                 worldWidth, 
                 worldHeight,
@@ -477,13 +481,13 @@ def run_simulation_with_visualization(entities, simulationParams, hallucinationP
                 friction,
                 space  # Reuse the space for collision detection with barriers
             )
-            sim_data['key_hallucinations'].append(halluc_data)
+            sim_data['key_distractors'].append(distractor_data)
         
-        # Process random hallucinations
-        randomParams = hallucinationParams.get('randomHallucinationParams', {})
+        # Process random distractors
+        randomParams = distractorParams.get('randomDistractorParams', {})
         if randomParams and randomParams.get('probability', 0) > 0:
-            print("Generating random hallucinations...")
-            random_hallucs = generate_random_hallucinations(
+            print("Generating random distractors...")
+            random_distractors = generate_random_distractors(
                 randomParams,
                 sim_data,
                 worldWidth,
@@ -496,7 +500,7 @@ def run_simulation_with_visualization(entities, simulationParams, hallucinationP
                 friction,
                 space
             )
-            sim_data['random_hallucinations'] = random_hallucs
+            sim_data['random_distractors'] = random_distractors
     
     return sim_data
 
@@ -624,11 +628,11 @@ def simulate():
         data = request.json
         entities = data.get("entities", [])
         simulationParams = data.get("simulationParams", [])
-        hallucinationParams = data.get("hallucinationParams", None)  # Optional hallucination params
+        distractorParams = data.get("distractorParams", None)  # Optional distractor params
         simulationParams = list(simulationParams.values())
         
         # Run the Pymunk simulation
-        sim_data = run_simulation_with_visualization(entities, simulationParams, hallucinationParams)
+        sim_data = run_simulation_with_visualization(entities, simulationParams, distractorParams)
         
         global GLOBAL_SIM_DATA
         GLOBAL_SIM_DATA = copy.deepcopy(sim_data)
