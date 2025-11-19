@@ -402,7 +402,7 @@ function App() {
           try {
             const parsedData = JSON.parse(e.target.result);
             
-            // Handle both old format (array) and new format (object with entities + distractor data)
+            // Handle both old format (array) and new format (object with entities + distractor data + simulation params)
             let parsedEntities;
             let hasDistractorData = false;
             
@@ -410,8 +410,18 @@ function App() {
               // Old format - just entities
               parsedEntities = parsedData;
             } else if (parsedData.entities) {
-              // New format - entities + optional distractor data
+              // New format - entities + optional distractor data + optional simulation params
               parsedEntities = parsedData.entities;
+              
+              // Load simulation params if present
+              if (parsedData.simulationParams) {
+                const simParams = parsedData.simulationParams;
+                if (simParams.videoLength !== undefined) setVideoLength(simParams.videoLength);
+                if (simParams.ballSpeed !== undefined) setBallSpeed(simParams.ballSpeed);
+                if (simParams.fps !== undefined) setFps(simParams.fps);
+                if (simParams.worldWidth !== undefined) setWorldWidth(simParams.worldWidth);
+                if (simParams.worldHeight !== undefined) setWorldHeight(simParams.worldHeight);
+              }
               
               if (parsedData.distractorData || parsedData.hallucinationData) {
                 hasDistractorData = true;
@@ -600,9 +610,16 @@ function App() {
       // Create trial directory
       const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
       
-      // Prepare init state data (entities + distractor data if in distractor mode)
+      // Prepare init state data (entities + distractor data if in distractor mode + simulation params)
       const initStateData = {
-        entities: entities
+        entities: entities,
+        simulationParams: {
+          videoLength,
+          ballSpeed,
+          fps,
+          worldWidth,
+          worldHeight
+        }
       };
       
       if (mode === "distractor" && (keyDistractors.length > 0 || randomDistractorParams.probability > 0)) {
@@ -646,7 +663,14 @@ function App() {
         
         // Prepare init state data
         const initStateData = {
-          entities: entities
+          entities: entities,
+          simulationParams: {
+            videoLength,
+            ballSpeed,
+            fps,
+            worldWidth,
+            worldHeight
+          }
         };
         
         if (mode === "distractor" && (keyDistractors.length > 0 || randomDistractorParams.probability > 0)) {

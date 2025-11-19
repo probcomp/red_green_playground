@@ -11,6 +11,7 @@ local build of the red-green playground, here are the instructions.
 Before you begin, ensure you have the following installed:
 - Conda (for Python environment management)
 - Git
+- Node.js v23.3.0 and npm 10.9.0 (npm comes bundled with Node.js)
 
 ### 1. Clone the Repository
 ```bash
@@ -27,30 +28,12 @@ pip install -r requirements.txt
 
 ### 3. Install Node.js and npm
 
-#### For macOS:
-1. Install Homebrew (if not already installed):
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+Install Node.js v23.3.0 from [nodejs.org](https://nodejs.org/). npm 10.9.0 comes bundled with Node.js.
 
-2. Install Node.js and npm:
+Verify installation:
 ```bash
-brew install node
-```
-
-#### For Ubuntu/Debian:
-```bash
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-```
-
-#### For Windows:
-1. Download the Node.js installer from [nodejs.org](https://nodejs.org/)
-2. Run the installer and follow the installation wizard
-3. Verify installation by opening a new terminal and running:
-```bash
-node --version
-npm --version
+node --version  # Should be v23.3.0
+npm --version   # Should be 10.9.0
 ```
 
 ### 4. Set Up and Run the Frontend
@@ -60,9 +43,9 @@ npm --version
 npm install
 ```
 
-2. Start the development server:
+2. Run the build
 ```bash
-npm start
+npm run build
 ```
 
 The website should automatically open in your default browser at `http://localhost:3000`. If it doesn't, manually open your browser and navigate to that address.
@@ -78,7 +61,15 @@ conda activate playground
 
 2. Start the Flask server:
 ```bash
-python create_stimuli.py
+python red_green_playground.py
 ```
 
 The backend will run on `http://localhost:5001`.
+
+### 6. Push to Heroku
+
+When ready, push to Heroku (only for authenticated user --> Arijit)
+
+```bash
+git push heroku main
+```
