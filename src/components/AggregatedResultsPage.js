@@ -4,20 +4,34 @@ import { Link } from 'react-router-dom';
 // List of aggregated result files (excluding trial-specific files)
 const aggregatedFiles = [
   'model_only_logfreq_all_trials.png',
-  'non_targeted_dtw_analysis.png',
+  'targeted_per_trial_metrics.png',
   'non_targeted_per_trial_metrics.png',
-  'targeted_decision_boundary_distribution.png',
+  'non_targeted_dtw_analysis.png',
   'targeted_dtw_analysis.png',
-  'targeted_logfreq.png',
+  'targeted_decision_boundary_distribution.png',
   'targeted_P(decision)_distribution.png',
   'targeted_P(decision)_partial_correlation.png',
   'targeted_P(green|decision)_partial_correlation.png',
-  'targeted_per_trial_metrics.png'
+  'targeted_logfreq.png',
 ];
 
-// Generate a nice title from filename
+// Map filenames to custom titles
 const getTitleFromFilename = (filename) => {
-  return filename
+  const titleMap = {
+    'model_only_logfreq_all_trials.png': 'Log Frequency Histogram (All Trials), Model Only',
+    'targeted_per_trial_metrics.png': 'Per Trial Metrics (Occlusion Trials only)',
+    'non_targeted_per_trial_metrics.png': 'Per Trial Metrics (All Trials)',
+    'non_targeted_dtw_analysis.png': 'Dynamic Time Warping Analysis (All Trials)',
+    'targeted_dtw_analysis.png': 'Dynamic Time Warping Analysis (Occlusion Trials only)',
+    'targeted_decision_boundary_distribution.png': 'Decision Boundary Distributional Shape (Occlusion Trials only)',
+    'targeted_P(decision)_distribution.png': 'P(Decision) Distributional Shape (Occlusion Trials only)',    
+    'targeted_P(decision)_partial_correlation.png': 'P(Decision) Partial Correlation (Occlusion Trials only)',
+    'targeted_P(green|decision)_partial_correlation.png': 'P(Green|Decision) Partial Correlation (Occlusion Trials only)',
+    'targeted_logfreq.png': 'Log Frequency Histogram (Occlusion Trials only) w/ baselines',
+  };
+  
+  // Return custom title if available, otherwise fall back to automatic generation
+  return titleMap[filename] || filename
     .replace('.png', '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, l => l.toUpperCase())
@@ -28,18 +42,18 @@ const getTitleFromFilename = (filename) => {
 // Lorem ipsum captions for each figure
 const getCaption = (filename) => {
   const captions = {
-    'model_only_logfreq_all_trials.png': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
-    'non_targeted_dtw_analysis.png': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-    'non_targeted_per_trial_metrics.png': 'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
-    'targeted_decision_boundary_distribution.png': 'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.',
-    'targeted_dtw_analysis.png': 'At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.',
-    'targeted_logfreq.png': 'Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.',
-    'targeted_P(decision)_distribution.png': 'Quo porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.',
-    'targeted_P(decision)_partial_correlation.png': 'Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.',
-    'targeted_P(green|decision)_partial_correlation.png': 'Vel illum qui dolorem eum fugiat quo voluptas nulla pariatur? At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores.',
-    'targeted_per_trial_metrics.png': 'Et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio.'
+    'model_only_logfreq_all_trials.png': 'Joint histogram of JTAP (x-axis) and human (y-axis) decisions across all trials for each timestep. Left: probability of making a decision, either red or green. Right: probability of choosing green given a decision was made',
+    'non_targeted_dtw_analysis.png': '(All trials and frames) Dynamic Time Warping (DTW) distance represents how similar model predictions are to human data (per trial) if we are allowed to stretch, and warp the time axis to get the best alignment (per model/baseline). Naturally, the DTW distance is in itself a bad measure for the red-green task because we want the model predictions to also time-align, but what this tells us is how good the "shape/levels" of the curves are. So the fact that the DTW distance is lower for the JTAP model compared to the baselines shows that the better performance of the JTAP model cannot be purely attributed to temporal differences, but also the level of red & green during occlusion. I think this is a positive finding for what we see visually.',
+    'non_targeted_per_trial_metrics.png': 'In this plot, we look at a few metrics (RMSE, KL Divergence, and Discretized Mutual Information) for JTAP and baselines against human data for all trials. This is done by comparing the Red-Green lines at every timestep. These represent a few different ways to quantify model-human alignment. The violin plot shows the distribution across the trials for the given metric.',
+    'targeted_decision_boundary_distribution.png': 'This plot shows the shape of the decision boundary distribution: |P(Green) - P(Red)| across all occluded timesteps. The lower the value, the closer the red & green lines are to each other, and the higher the value, the more confidence there is in one option over the other. Note that this plot merely visualizes the distributional shape, but it does not imply alignment, because that requires a direct frame-by-frame comparison, as is done for the Log Frequency Histogram plots.',
+    'targeted_dtw_analysis.png': '(Occlusion trials & frames only) Dynamic Time Warping (DTW) distance represents how similar model predictions are to human data (per trial) if we are allowed to stretch, and warp the time axis to get the best alignment (per model/baseline). Naturally, the DTW distance is in itself a bad measure for the red-green task because we want the model predictions to also time-align, but what this tells us is how good the "shape/levels" of the curves are. So the fact that the DTW distance is lower for the JTAP model compared to the baselines shows that the better performance of the JTAP model cannot be purely attributed to temporal differences, but also the level of red & green during occlusion. I think this is a positive finding for what we see visually.',
+    'targeted_logfreq.png': 'Joint histogram of JTAP (x-axis) and human (y-axis) decisions across all occluded timesteps. Left: probability of making a decision, either red or green. Right: probability of choosing green given a decision was made. Plots shown for JTAP model and baselines (Frozen and Decaying).',
+    'targeted_P(decision)_distribution.png': 'This plot shows the shape of the decision distribution: P(Decision) = P(Green) + P(Red) across all occluded timesteps. Note that this plot merely visualizes the distributional shape, but it does not imply alignment, because that requires a direct frame-by-frame comparison, which is shown on the left column of the targeted log frequency histogram plot.',
+    'targeted_P(decision)_partial_correlation.png': 'The partial correlation here is a measure of the linear relationship between the JTAP Model and Humans for their respective P(Decision) across all occluded timesteps while controlling for the effects of a baseline model (Frozen or Decaying). Generally, this measure is used to remove confounders for correlation analysis, but we can think of this as how much the JTAP model additionally captures the patterns of human reasoning, while accounting for any shared explanatory power from a baseline model. I do not know if this is appropriate/accepted in the cognitive science field, but I thought this was an interesting and positive finding to share. Each dot in the violin plot indicates a trial.',
+    'targeted_P(green|decision)_partial_correlation.png': 'The partial correlation here is a measure of the linear relationship between the JTAP Model and Humans for their respective P(Green|Decision) across all occluded timesteps while controlling for the effects of a baseline model (Frozen or Decaying). Generally, this measure is used to remove confounders for correlation analysis, but we can think of this as how much the JTAP model additionally captures the patterns of human reasoning, while accounting for any shared explanatory power from a baseline model. I do not know if this is appropriate/accepted in the cognitive science field, but I thought this was an interesting and positive finding to share. Each dot in the violin plot indicates a trial.',
+    'targeted_per_trial_metrics.png': 'In this plot, we look at a few metrics (RMSE, KL Divergence, and Discretized Mutual Information) for JTAP and baselines against human data for occlusion trials only. This is done by comparing the Red-Green lines at every timestep. The violin plot shows the distribution across the trials for the given metric. These represent a few different ways to quantify model-human alignment.'
   };
-  return captions[filename] || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+  return captions[filename] || 'Caption not found';
 };
 
 function AggregatedResultsPage() {
@@ -147,7 +161,7 @@ function AggregatedResultsPage() {
           color: '#64748b',
           lineHeight: '1.6'
         }}>
-          Click on any figure to view it in detail with caption. Use arrow keys or navigation buttons to browse.
+          These plots are primarily for our internal analysis, but if we think they are appropriate for the audience, they could be candidate figures for the paper (post any improvements/clarifications we think is necessary).
         </p>
       </div>
 
@@ -426,4 +440,3 @@ function AggregatedResultsPage() {
 }
 
 export default AggregatedResultsPage;
-

@@ -103,6 +103,13 @@ function TrialByTrialPage() {
         }}>
           Trial-by-Trial Plots
         </h1>
+        <p style={{
+          fontSize: '20px',
+          color: '#64748b',
+          lineHeight: '1.6'
+        }}>
+          In each plot, you will see a dark gray and light gray region. The dark gray region means that the ball if fully occluded, while the light gray region means that the ball is partially occluded. Any other region implies that the ball is fully visible.
+        </p>
       </div>
 
       {/* Trials Grid */}
