@@ -756,7 +756,7 @@ function App() {
             Red-Green Playground
           </Link>
           <Link
-            to="/custom"
+            to="/jtap"
             style={{
               color: "#8b5cf6",
               textDecoration: "none",
@@ -773,7 +773,7 @@ function App() {
               e.target.style.backgroundColor = "transparent";
             }}
           >
-            Custom Page
+            JTAP Results
           </Link>
         </div>
 
