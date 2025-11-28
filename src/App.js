@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Rnd } from "react-rnd";
 import VideoPlayer from "./components/VideoPlayer";
 
@@ -718,16 +719,65 @@ function App() {
       backgroundColor: "#f8fafc",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     }}>
-      {/* Top Bar with Mode Switcher */}
+      {/* Top Bar with Navigation and Mode Switcher */}
       <div style={{
         display: "flex",
-        justifyContent: "flex-end",
+        justifyContent: "space-between",
         alignItems: "center",
         padding: "12px 24px",
         background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
         borderBottom: "2px solid #e2e8f0",
         boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)"
       }}>
+        {/* Navigation Links */}
+        <div style={{
+          display: "flex",
+          gap: "12px",
+          alignItems: "center"
+        }}>
+          <Link
+            to="/"
+            style={{
+              color: "#3b82f6",
+              textDecoration: "none",
+              fontSize: "14px",
+              fontWeight: "600",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#eff6ff";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "transparent";
+            }}
+          >
+            Red-Green Playground
+          </Link>
+          <Link
+            to="/jtap"
+            style={{
+              color: "#8b5cf6",
+              textDecoration: "none",
+              fontSize: "14px",
+              fontWeight: "600",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#f3e8ff";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "transparent";
+            }}
+          >
+            JTAP Results
+          </Link>
+        </div>
+
+        {/* Mode Switcher */}
         <div style={{
           display: "flex",
           gap: "8px",

@@ -13,12 +13,14 @@
     "react-dom": "^18.3.1",
     "react-draggable": "^4.4.6",
     "react-rnd": "^10.4.13",
+    "react-router-dom": "^7.9.6",
     "react-scripts": "^5.0.1",
     "socket.io-client": "^4.8.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "build": "react-scripts build",
+    "build": "REACT_APP_BUILD_DATE=\"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\" react-scripts build",
+    "build:windows": "set REACT_APP_BUILD_DATE=%date% && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

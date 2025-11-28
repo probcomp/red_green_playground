@@ -1,13 +1,26 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import App from './App';
+import JTAPResultsPage from './components/JTAPResultsPage';
+import Cogsci2025TunedPage from './components/Cogsci2025TunedPage';
+import TrialByTrialPage from './components/TrialByTrialPage';
+import AggregatedResultsPage from './components/AggregatedResultsPage';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/jtap" element={<JTAPResultsPage />} />
+        <Route path="/jtap/cogsci2025-tuned" element={<Cogsci2025TunedPage />} />
+        <Route path="/jtap/cogsci2025-tuned/trial-by-trial" element={<TrialByTrialPage />} />
+        <Route path="/jtap/cogsci2025-tuned/aggregated" element={<AggregatedResultsPage />} />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
 
