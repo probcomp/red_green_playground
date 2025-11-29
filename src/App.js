@@ -59,6 +59,9 @@ function App() {
   const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null); // State to store the actual directory handle
   const [autoDownloadWebM, setAutoDownloadWebM] = useState(true); // State for WebM download toggle
 
+  // Scene transformation controls
+  const [movementUnit, setMovementUnit] = useState(1.0); // Movement unit value (editable in dashboard)
+
   const px_scale = 25;
   const interval = 0.1;
   const border_px = 2;
@@ -73,6 +76,176 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyDistractors, shouldAutoSimulate, entities]);
+
+  // Function to move all scene elements
+  const moveScene = useCallback((direction) => {
+    if (entities.length === 0) return;
+
+    let deltaX = 0;
+    let deltaY = 0;
+
+    switch (direction) {
+      case 'ArrowUp':
+        deltaY = movementUnit;
+        break;
+      case 'ArrowDown':
+        deltaY = -movementUnit;
+        break;
+      case 'ArrowLeft':
+        deltaX = -movementUnit;
+        break;
+      case 'ArrowRight':
+        deltaX = movementUnit;
+        break;
+      default:
+        return;
+    }
+
+    setEntities((prevEntities) => {
+      const updatedEntities = prevEntities.map((entity) => {
+        const newX = Math.max(0, Math.min(entity.x + deltaX, worldWidth - entity.width));
+        const newY = Math.max(0, Math.min(entity.y + deltaY, worldHeight - entity.height));
+        
+        return {
+          ...entity,
+          x: newX,
+          y: newY,
+        };
+      });
+
+      // Update target direction input if target exists
+      const targetEntity = updatedEntities.find(e => e.type === "target");
+      if (targetEntity) {
+        setTargetDirection(targetEntity.direction || 0);
+        setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
+      }
+
+      return updatedEntities;
+    });
+  }, [entities.length, movementUnit, worldWidth, worldHeight]);
+
+  // Keyboard event listener for arrow keys
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle arrow keys if not typing in an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        moveScene(e.key);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [moveScene]);
+
+  // Function to rotate the entire scene
+  const rotateScene = (clockwise) => {
+    if (entities.length === 0) return;
+
+    const centerX = worldWidth / 2;
+    const centerY = worldHeight / 2;
+    const rotationAngle = clockwise ? Math.PI / 2 : -Math.PI / 2;
+
+    setEntities((prevEntities) => {
+      const updatedEntities = prevEntities.map((entity) => {
+        // Calculate center of entity relative to scene center
+        // entity.y is the bottom coordinate, so center is at y + height/2
+        const entityCenterX = entity.x + entity.width / 2;
+        const entityCenterY = entity.y + entity.height / 2;
+        const relX = entityCenterX - centerX;
+        const relY = entityCenterY - centerY;
+
+        // Rotate the position (90 degrees clockwise or anticlockwise)
+        let newRelX, newRelY;
+        if (clockwise) {
+          // Clockwise 90°: (x, y) -> (y, -x)
+          newRelX = relY;
+          newRelY = -relX;
+        } else {
+          // Anticlockwise 90°: (x, y) -> (-y, x)
+          newRelX = -relY;
+          newRelY = relX;
+        }
+
+        // Convert back to absolute coordinates
+        const newEntityCenterX = newRelX + centerX;
+        const newEntityCenterY = newRelY + centerY;
+
+        // For barriers, occluders, and sensors, swap width and height when rotating
+        // Targets are circular so they keep their dimensions
+        let newWidth = entity.width;
+        let newHeight = entity.height;
+        if (entity.type === 'barrier' || entity.type === 'occluder' || 
+            entity.type === 'red_sensor' || entity.type === 'green_sensor') {
+          newWidth = entity.height;
+          newHeight = entity.width;
+        }
+
+        // Calculate new position (bottom-left corner, which is what entity.y represents)
+        // This applies to ALL entity types including sensors, targets, etc.
+        const newX = Math.max(0, Math.min(newEntityCenterX - newWidth / 2, worldWidth - newWidth));
+        const newY = Math.max(0, Math.min(newEntityCenterY - newHeight / 2, worldHeight - newHeight));
+
+        // Rotate the target direction if it's a target
+        // The direction needs to rotate to maintain the same relative direction in the rotated scene
+        // In this coordinate system: 0 = right, π/2 = up, π = left, -π/2 = down
+        // When rotating the scene clockwise 90°: positions rotate (x,y) -> (y,-x)
+        // For directions: a vector pointing right (0) should point down (-π/2) after clockwise rotation
+        // So clockwise rotation: direction -> direction - π/2
+        // Anticlockwise rotation: direction -> direction + π/2
+        let newDirection = entity.direction || 0;
+        if (entity.type === 'target') {
+          // Rotate the direction opposite to the scene rotation (because we're rotating the coordinate system)
+          // If scene rotates clockwise by π/2, direction rotates by -π/2
+          // If scene rotates anticlockwise by -π/2, direction rotates by +π/2
+          newDirection = (entity.direction || 0) - rotationAngle;
+          // Normalize to [-π, π]
+          while (newDirection > Math.PI) newDirection -= 2 * Math.PI;
+          while (newDirection < -Math.PI) newDirection += 2 * Math.PI;
+        }
+
+        // Return updated entity - create new object to ensure React detects the change
+        // This applies to ALL entity types: target, barrier, occluder, red_sensor, green_sensor, etc.
+        const updatedEntity = {
+          id: entity.id,
+          type: entity.type,
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        };
+
+        // Only add direction if it's a target (or if entity already has direction)
+        if (entity.type === 'target' || entity.direction !== undefined) {
+          updatedEntity.direction = newDirection;
+        }
+
+        // Copy any other properties that might exist
+        Object.keys(entity).forEach(key => {
+          if (!['id', 'type', 'x', 'y', 'width', 'height', 'direction'].includes(key)) {
+            updatedEntity[key] = entity[key];
+          }
+        });
+
+        return updatedEntity;
+      });
+
+      // Update target direction state
+      const targetEntity = updatedEntities.find(e => e.type === "target");
+      if (targetEntity) {
+        setTargetDirection(targetEntity.direction || 0);
+        setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
+      }
+
+      return updatedEntities;
+    });
+  };
 
   const addEntity = (type) => {
     const existingTarget = entities.some((e) => e.type === "target");
@@ -1166,6 +1339,167 @@ function App() {
                   <span style={{ fontSize: '16px' }}>⚠️</span> {physicsWarning}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Scene Transformation Controls */}
+          <div style={{ 
+            background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)", 
+            padding: '24px', 
+            borderRadius: '12px', 
+            border: '1px solid #e2e8f0',
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+          }}>
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              fontSize: '18px', 
+              fontWeight: '700', 
+              color: '#1e293b',
+              letterSpacing: '-0.025em'
+            }}>
+              Scene Controls
+            </h3>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '8px',
+                letterSpacing: '0.025em'
+              }}>
+                Movement Unit
+              </label>
+              <input
+                type="number"
+                value={movementUnit}
+                onChange={(e) => setMovementUnit(Number(e.target.value))}
+                min="0.1"
+                step="0.1"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#9ca3af', 
+                marginTop: '6px' 
+              }}>
+                Use arrow keys to move all scene elements
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '0' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151', 
+                marginBottom: '12px',
+                letterSpacing: '0.025em'
+              }}>
+                Rotate Scene
+              </label>
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px'
+              }}>
+                <button
+                  onClick={() => rotateScene(false)}
+                  disabled={entities.length === 0}
+                  style={{
+                    flex: 1,
+                    background: entities.length > 0 
+                      ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" 
+                      : "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
+                    color: "white",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    cursor: entities.length > 0 ? "pointer" : "not-allowed",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    opacity: entities.length > 0 ? 1 : 0.5
+                  }}
+                  onMouseEnter={(e) => {
+                    if (entities.length > 0) {
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (entities.length > 0) {
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+                    }
+                  }}
+                >
+                  ↺ Anticlockwise
+                </button>
+                <button
+                  onClick={() => rotateScene(true)}
+                  disabled={entities.length === 0}
+                  style={{
+                    flex: 1,
+                    background: entities.length > 0 
+                      ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" 
+                      : "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
+                    color: "white",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    cursor: entities.length > 0 ? "pointer" : "not-allowed",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    opacity: entities.length > 0 ? 1 : 0.5
+                  }}
+                  onMouseEnter={(e) => {
+                    if (entities.length > 0) {
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (entities.length > 0) {
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+                    }
+                  }}
+                >
+                  ↻ Clockwise
+                </button>
+              </div>
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#9ca3af', 
+                marginTop: '6px' 
+              }}>
+                Rotate all elements 90° about scene center
+              </div>
             </div>
           </div>
 
