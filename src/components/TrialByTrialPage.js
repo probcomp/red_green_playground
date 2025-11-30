@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 
 function TrialByTrialPage() {
   const [selectedTrial, setSelectedTrial] = useState(null);
+  const [hidePlotInitially, setHidePlotInitially] = useState(false);
+  const [plotRevealed, setPlotRevealed] = useState(false);
+  const [hideVideo, setHideVideo] = useState(false);
   const trials = Array.from({ length: 50 }, (_, i) => `E${i + 1}`);
 
   const navigateTrial = (direction) => {
@@ -13,6 +16,7 @@ function TrialByTrialPage() {
     
     if (newIndex >= 0 && newIndex < trials.length) {
       setSelectedTrial(trials[newIndex]);
+      setPlotRevealed(false); // Reset plot reveal when navigating
     }
   };
 
@@ -37,10 +41,12 @@ function TrialByTrialPage() {
 
   const openModal = (trialName) => {
     setSelectedTrial(trialName);
+    setPlotRevealed(false); // Reset plot reveal when opening a new trial
   };
 
   const closeModal = () => {
     setSelectedTrial(null);
+    setPlotRevealed(false); // Reset plot reveal when closing
   };
 
   const handleModalClick = (e) => {
@@ -110,6 +116,158 @@ function TrialByTrialPage() {
         }}>
           In each plot, you will see a dark gray and light gray region. The dark gray region means that the ball if fully occluded, while the light gray region means that the ball is partially occluded. Any other region implies that the ball is fully visible.
         </p>
+      </div>
+
+      {/* Toggle for Hide Plot Initially */}
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto 40px auto',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '16px 24px',
+        backgroundColor: '#ffffff',
+        borderRadius: '12px',
+        border: '2px solid #e2e8f0',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+      }}>
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: '500',
+          color: '#1e293b',
+          userSelect: 'none'
+        }}>
+          {/* Custom Toggle Switch */}
+          <div
+            onClick={() => setHidePlotInitially(!hidePlotInitially)}
+            style={{
+              position: 'relative',
+              width: '56px',
+              height: '32px',
+              borderRadius: '16px',
+              backgroundColor: hidePlotInitially ? '#3b82f6' : '#e2e8f0',
+              transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              boxShadow: hidePlotInitially 
+                ? '0 2px 8px rgba(59, 130, 246, 0.4)' 
+                : 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}
+            onMouseEnter={(e) => {
+              if (!hidePlotInitially) {
+                e.currentTarget.style.backgroundColor = '#cbd5e1';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!hidePlotInitially) {
+                e.currentTarget.style.backgroundColor = '#e2e8f0';
+              }
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: '3px',
+                left: hidePlotInitially ? '27px' : '3px',
+                width: '26px',
+                height: '26px',
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15)',
+                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {hidePlotInitially && (
+                <span style={{ fontSize: '14px', lineHeight: '1' }}>👁️</span>
+              )}
+            </div>
+          </div>
+          <span>Hide results plot initially (click plot to reveal)</span>
+        </label>
+        
+        {/* Toggle for Hide Video */}
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: '500',
+          color: '#1e293b',
+          userSelect: 'none',
+          marginLeft: '32px',
+          paddingLeft: '32px',
+          borderLeft: '1px solid #e2e8f0'
+        }}>
+          {/* Custom Toggle Switch */}
+          <div
+            onClick={() => setHideVideo(!hideVideo)}
+            style={{
+              position: 'relative',
+              width: '56px',
+              height: '32px',
+              borderRadius: '16px',
+              backgroundColor: hideVideo ? '#3b82f6' : '#e2e8f0',
+              transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              boxShadow: hideVideo 
+                ? '0 2px 8px rgba(59, 130, 246, 0.4)' 
+                : 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}
+            onMouseEnter={(e) => {
+              if (!hideVideo) {
+                e.currentTarget.style.backgroundColor = '#cbd5e1';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!hideVideo) {
+                e.currentTarget.style.backgroundColor = '#e2e8f0';
+              }
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: '3px',
+                left: hideVideo ? '27px' : '3px',
+                width: '26px',
+                height: '26px',
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15)',
+                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {hideVideo && (
+                <span style={{ fontSize: '14px', lineHeight: '1' }}>🎥</span>
+              )}
+            </div>
+          </div>
+          <span>Hide video</span>
+        </label>
+        
+        <div style={{
+          fontSize: '14px',
+          color: '#64748b',
+          marginLeft: 'auto'
+        }}>
+          {hidePlotInitially 
+            ? 'Video will show first, click plot area to reveal results' 
+            : hideVideo
+            ? 'Only results plot will show'
+            : 'Both results plot and video will show together'}
+        </div>
       </div>
 
       {/* Trials Grid */}
@@ -344,81 +502,126 @@ function TrialByTrialPage() {
               flexWrap: 'wrap'
             }}>
               {/* Plot Image */}
-              <div style={{
-                flex: '1 1 50%',
-                minWidth: 'min(400px, 100%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <img
-                  src={`/cogsci2025_tuned/${selectedTrial}_plot.png`}
-                  alt={`${selectedTrial} plot`}
-                  style={{
+              <div 
+                style={{
+                  flex: hideVideo ? '1 1 100%' : '1 1 50%',
+                  minWidth: hideVideo ? 'min(600px, 100%)' : 'min(400px, 100%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}
+                onClick={() => {
+                  if (hidePlotInitially && !plotRevealed) {
+                    setPlotRevealed(true);
+                  }
+                }}
+              >
+                {hidePlotInitially && !plotRevealed ? (
+                  <div style={{
                     width: '100%',
-                    height: 'auto',
+                    minHeight: '400px',
                     maxHeight: '75vh',
                     borderRadius: '8px',
                     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                    backgroundColor: '#ffffff',
-                    padding: '8px',
-                    objectFit: 'contain'
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px dashed rgba(255, 255, 255, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
                   }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const errorDiv = document.createElement('div');
-                    errorDiv.style.cssText = `
-                      color: #ffffff; 
-                      text-align: center; 
-                      padding: 40px;
-                      font-size: 18px;
-                    `;
-                    errorDiv.textContent = `Image not found for ${selectedTrial}`;
-                    e.target.parentElement.appendChild(errorDiv);
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                   }}
-                />
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  }}
+                  >
+                    <div style={{
+                      textAlign: 'center',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '18px',
+                      fontWeight: '500',
+                      padding: '20px'
+                    }}>
+                      <div>Click to see results</div>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={`/cogsci2025_tuned/${selectedTrial}_plot.png`}
+                    alt={`${selectedTrial} plot`}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '75vh',
+                      borderRadius: '8px',
+                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                      backgroundColor: '#ffffff',
+                      padding: '8px',
+                      objectFit: 'contain'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const errorDiv = document.createElement('div');
+                      errorDiv.style.cssText = `
+                        color: #ffffff; 
+                        text-align: center; 
+                        padding: 40px;
+                        font-size: 18px;
+                      `;
+                      errorDiv.textContent = `Image not found for ${selectedTrial}`;
+                      e.target.parentElement.appendChild(errorDiv);
+                    }}
+                  />
+                )}
               </div>
 
               {/* Video Player */}
-              <div style={{
-                flex: '1 1 40%',
-                minWidth: 'min(300px, 100%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <video
-                  key={selectedTrial} // Force re-render when trial changes
-                  src={`/cogsci2025_tuned/${selectedTrial}_stimulus.mp4`}
-                  controls
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    maxHeight: '75vh',
-                    borderRadius: '8px',
-                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                    backgroundColor: '#000000'
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const errorDiv = document.createElement('div');
-                    errorDiv.style.cssText = `
-                      color: #ffffff; 
-                      text-align: center; 
-                      padding: 40px;
-                      font-size: 18px;
-                      background: rgba(255, 255, 255, 0.1);
-                      border-radius: 8px;
-                    `;
-                    errorDiv.textContent = `Video not found for ${selectedTrial}`;
-                    e.target.parentElement.appendChild(errorDiv);
-                  }}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              </div>
+              {!hideVideo && (
+                <div style={{
+                  flex: '1 1 40%',
+                  minWidth: 'min(300px, 100%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <video
+                    key={selectedTrial} // Force re-render when trial changes
+                    src={`/cogsci2025_tuned/${selectedTrial}_stimulus.mp4`}
+                    controls
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '75vh',
+                      borderRadius: '8px',
+                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                      backgroundColor: '#000000'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const errorDiv = document.createElement('div');
+                      errorDiv.style.cssText = `
+                        color: #ffffff; 
+                        text-align: center; 
+                        padding: 40px;
+                        font-size: 18px;
+                        background: rgba(255, 255, 255, 0.1);
+                        border-radius: 8px;
+                      `;
+                      errorDiv.textContent = `Video not found for ${selectedTrial}`;
+                      e.target.parentElement.appendChild(errorDiv);
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
             </div>
 
             {/* Trial Counter */}
