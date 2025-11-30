@@ -6,35 +6,35 @@ const categories = [
   {
     id: 'gap-from-edge',
     name: 'Gap from Edge',
-    description: 'These trials vary how far the point of collision is from a barrier edge, or how far the object\'s trajectory is from a barrier edge assuming it does not collide. In condition A, the ball is always very close to the edge of a barrier (whether or not it collides). In conditions B and C, the trajectory of the ball comes at a different angle, such that the gap is larger from the barrier edge. This is a between-participants condition where each participant sees only one variant (A, B, or C).',
+    description: 'These trials vary how far the point of collision is from a barrier edge, or how far the object\'s trajectory is from a barrier edge assuming it does not collide. In condition A, the ball is always very close to the edge of a barrier (whether or not it collides). In conditions B and C, the trajectory of the ball comes at a different angle (with the same starting point), such that the gap is larger from the barrier edge (be it a collision or a bigger miss from the barrier edge). This is a between-participants condition where each participant sees only one variant (A, B, or C).',
     trials: ['CT1', 'CT2', 'CT3', 'CT4', 'CT5'],
     hasVariants: true
   },
   {
     id: 'occlusion-window',
     name: 'Occlusion Window',
-    description: 'These trials feature window or slit gaps in the occluder. In condition A, there are no windows or slits. In condition B, there is a window or slit that may overlap with the ball trajectory before a possible collision (note: it may or may not overlap). In condition C, there is a window or slit that may overlap with the ball trajectory after a possible collision. This is a between-participants condition where each participant sees only one variant (A, B, or C).',
+    description: 'These trials feature window or slit gaps in the occluder. In condition A, there are no windows or gaps. In condition B, there is a window or slit that may overlap with the ball trajectory before a possible collision (note: it may or may not overlap). In condition C, there is a window or slit that may overlap with the ball trajectory after a possible collision. This is a between-participants condition where each participant sees only one variant (A, B, or C).',
     trials: ['CT6', 'CT7', 'CT8', 'CT9', 'CT10', 'CT11', 'CT12', 'CT13', 'CT14', 'CT15'],
     hasVariants: true
   },
   {
     id: 'regular-occlusion',
     name: 'Regular Occlusion Trials',
-    description: 'These are regular trials with occlusion. All participants will see the same trials (no variants).',
+    description: 'These are regular trials with occlusion. All participants will see the same trials (no variants). Some of these are adaptations from the Cogsci 2025 trials.',
     trials: ['CT16', 'CT17', 'CT18', 'CT19', 'CT20', 'CT21', 'CT22', 'CT23', 'CT24', 'CT25', 'CT26', 'CT27'],
     hasVariants: false
   },
   {
     id: 'simple-filler-occlusion',
     name: 'Simple Filler Trials (with Occlusion)',
-    description: 'These are simpler filler trials with occlusion. All participants will see the same trials (no variants).',
+    description: 'These are simpler filler trials with occlusion. All participants will see the same trials (no variants). In these trials, we do not expect the model to do better than the baselines.',
     trials: ['CT28', 'CT29', 'CT30', 'CT31', 'CT32'],
     hasVariants: false
   },
   {
     id: 'filler-no-occlusion',
     name: 'Filler Trials (No Occlusion)',
-    description: 'These are filler trials with no occlusion. All participants will see the same trials (no variants). Note: Trials CT33 to CT50 are yet to be generated.',
+    description: 'These are filler trials with no occlusion. All participants will see the same trials (no variants). Note: These trials are yet to be generated.',
     trials: Array.from({ length: 18 }, (_, i) => `CT${i + 33}`),
     hasVariants: false,
     notGenerated: true
@@ -179,14 +179,22 @@ function CandidateTrialsPage() {
             marginBottom: '16px',
             letterSpacing: '-0.025em'
           }}>
-            New Candidate Trials
+            Proposed Candidate Trials
           </h1>
           <p style={{
             fontSize: '20px',
             color: '#64748b',
             lineHeight: '1.6'
           }}>
-            Select a category to view the proposed experimental trials.
+            Here are some new experimental trials I am proposing, which I have divided up into 5 categories. For the first 2 categories, each trial has 3 variants, and each participant will only see one of the three variants. The other categories are just single-variant trials, where every participant will see the same trial. The goal of having a subset of trials with variants is to pick apart possible interesting differences in human judgments, which we hope our model will also capture. <strong>Note that since these are proposed trials, we only have model + baseline results and no human results yet. The model results use the tuned fit hyperparameters from the <Link to="/jtap/cogsci2025-tuned" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Cogsci 2025 trials</Link></strong>. The current composition of trials is as follows:
+            <ul>
+              <li>Gap from Edge: 5 trials</li>
+              <li>Occlusion Window: 10 trials</li>
+              <li>Regular Occlusion Trials: 12 trials</li>
+              <li>Simple Filler Trials (with Occlusion): 5 trials</li>
+              <li>Filler Trials (No Occlusion): 18 trials (yet to be generated)</li>
+            </ul>
+            <strong>Total: 50 trials</strong>
           </p>
         </div>
 
@@ -250,7 +258,7 @@ function CandidateTrialsPage() {
                 {category.hasVariants 
                   ? `${category.trials.length} trials × 3 variants = ${category.trials.length * 3} total`
                   : `${category.trials.length} trials`}
-                {category.notGenerated && ' (some not yet generated)'}
+                {category.notGenerated && ' (Not yet generated)'}
               </div>
             </div>
           ))}
@@ -996,7 +1004,7 @@ function CandidateTrialsPage() {
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: expandedVariant && expandedVariant.startsWith('plot-')
-                      ? variants.map(v => expandedVariant === `plot-${v}` ? '2fr' : '1fr').join(' ')
+                      ? variants.map(v => expandedVariant === `plot-${v}` ? '4fr' : '1fr').join(' ')
                       : 'repeat(3, 1fr)',
                     gap: '16px',
                     width: '100%',
@@ -1017,7 +1025,9 @@ function CandidateTrialsPage() {
                             cursor: 'pointer',
                             transition: 'all 0.3s ease',
                             transform: isExpanded ? 'scale(1.05)' : 'scale(1)',
-                            zIndex: isExpanded ? 10 : 1
+                            zIndex: isExpanded ? 10 : 1,
+                            padding: isExpanded ? '0' : '0',
+                            margin: '0'
                           }}
                         >
                           <div style={{
@@ -1081,11 +1091,12 @@ function CandidateTrialsPage() {
                                 boxShadow: isExpanded 
                                   ? '0 20px 60px rgba(59, 130, 246, 0.5)' 
                                   : '0 20px 60px rgba(0, 0, 0, 0.3)',
-                                backgroundColor: '#ffffff',
-                                padding: '8px',
+                                backgroundColor: isExpanded ? 'transparent' : '#ffffff',
+                                padding: isExpanded ? '0' : '8px',
                                 objectFit: 'contain',
                                 transition: 'all 0.3s ease',
-                                border: isExpanded ? '2px solid #3b82f6' : '2px solid transparent'
+                                border: isExpanded ? '2px solid #3b82f6' : '2px solid transparent',
+                                display: 'block'
                               }}
                               onError={(e) => {
                                 e.target.style.display = 'none';
