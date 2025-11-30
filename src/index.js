@@ -7,6 +7,7 @@ import JTAPResultsPage from './components/JTAPResultsPage';
 import Cogsci2025TunedPage from './components/Cogsci2025TunedPage';
 import TrialByTrialPage from './components/TrialByTrialPage';
 import AggregatedResultsPage from './components/AggregatedResultsPage';
+import CandidateTrialsPage from './components/CandidateTrialsPage';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -19,6 +20,7 @@ root.render(
         <Route path="/jtap/cogsci2025-tuned" element={<Cogsci2025TunedPage />} />
         <Route path="/jtap/cogsci2025-tuned/trial-by-trial" element={<TrialByTrialPage />} />
         <Route path="/jtap/cogsci2025-tuned/aggregated" element={<AggregatedResultsPage />} />
+        <Route path="/jtap/candidate-trials" element={<CandidateTrialsPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

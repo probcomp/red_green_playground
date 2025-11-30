@@ -121,6 +121,66 @@ function JTAPResultsPage() {
             </p>
           </div>
           </Link>
+
+          <Link
+            to="/jtap/candidate-trials"
+            style={{
+              textDecoration: 'none',
+              color: 'inherit'
+            }}
+          >
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '32px',
+              border: '2px solid #e2e8f0',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.borderColor = '#3b82f6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+            }}
+          >
+            <img
+              src="/CandidateTrialsNov29_Plots/CT14A_trajectory.png"
+              alt="CT14A trajectory"
+              style={{
+                width: '192px',
+                height: 'auto',
+                marginBottom: '8px',
+                borderRadius: '8px',
+                border: '0.5px solid #000000'
+              }}
+            />
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '600',
+              color: '#1e293b',
+              margin: 0
+            }}>
+              New Candidate Trials
+            </h2>
+            <p style={{
+              fontSize: '16px',
+              color: '#64748b',
+              margin: 0,
+              lineHeight: '1.6'
+            }}>
+              Proposed experimental trials organized by category, including between-participants variants and single-variant trials.
+            </p>
+          </div>
+          </Link>
         </div>
       </div>
     </div>
