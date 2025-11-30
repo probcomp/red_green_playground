@@ -150,7 +150,7 @@ function TrialByTrialPage() {
             }}
           >
             <img
-              src={`/cogsci2025_tuned/${trialName}_stim_traj.png`}
+              src={`/cogsci2025_tuned/${trialName}_trajectory.png`}
               alt={`${trialName} trajectory`}
               style={{
                 width: '100%',
@@ -391,7 +391,7 @@ function TrialByTrialPage() {
               }}>
                 <video
                   key={selectedTrial} // Force re-render when trial changes
-                  src={`/cogsci2025_tuned/${selectedTrial}.mp4`}
+                  src={`/cogsci2025_tuned/${selectedTrial}_stimulus.mp4`}
                   controls
                   style={{
                     width: '100%',
