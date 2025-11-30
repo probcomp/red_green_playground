@@ -312,12 +312,14 @@ function TrialByTrialPage() {
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'relative',
-              maxWidth: '90vw',
+              maxWidth: '95vw',
               maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '20px'
+              gap: '20px',
+              width: '100%',
+              overflow: 'auto'
             }}
           >
             {/* Trial Name */}
@@ -330,32 +332,94 @@ function TrialByTrialPage() {
               {selectedTrial}
             </div>
 
-            {/* Image */}
-            <img
-              src={`/cogsci2025_tuned/${selectedTrial}_plot.png`}
-              alt={`${selectedTrial} plot`}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '80vh',
-                borderRadius: '8px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                backgroundColor: '#ffffff',
-                padding: '8px'
-              }}
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = `
-                  <div style="
-                    color: #ffffff; 
-                    text-align: center; 
-                    padding: 40px;
-                    font-size: 18px;
-                  ">
-                    Image not found for ${selectedTrial}
-                  </div>
-                `;
-              }}
-            />
+            {/* Plot and Video Container */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '24px',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              maxHeight: '75vh',
+              flexWrap: 'wrap'
+            }}>
+              {/* Plot Image */}
+              <div style={{
+                flex: '1 1 50%',
+                minWidth: 'min(400px, 100%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <img
+                  src={`/cogsci2025_tuned/${selectedTrial}_plot.png`}
+                  alt={`${selectedTrial} plot`}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '75vh',
+                    borderRadius: '8px',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                    backgroundColor: '#ffffff',
+                    padding: '8px',
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                      color: #ffffff; 
+                      text-align: center; 
+                      padding: 40px;
+                      font-size: 18px;
+                    `;
+                    errorDiv.textContent = `Image not found for ${selectedTrial}`;
+                    e.target.parentElement.appendChild(errorDiv);
+                  }}
+                />
+              </div>
+
+              {/* Video Player */}
+              <div style={{
+                flex: '1 1 40%',
+                minWidth: 'min(300px, 100%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <video
+                  key={selectedTrial} // Force re-render when trial changes
+                  src={`/cogsci2025_tuned/${selectedTrial}.mp4`}
+                  controls
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '75vh',
+                    borderRadius: '8px',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                    backgroundColor: '#000000'
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                      color: #ffffff; 
+                      text-align: center; 
+                      padding: 40px;
+                      font-size: 18px;
+                      background: rgba(255, 255, 255, 0.1);
+                      border-radius: 8px;
+                    `;
+                    errorDiv.textContent = `Video not found for ${selectedTrial}`;
+                    e.target.parentElement.appendChild(errorDiv);
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
 
             {/* Trial Counter */}
             <div style={{
