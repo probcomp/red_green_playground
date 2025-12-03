@@ -30,18 +30,46 @@ const metricsData = {
   'red_green_ordering': {
     name: 'Red vs Green Ordering',
     data: {'E1': 0.8974358974358975, 'E2': 0.84375, 'E3': 0.9318181818181818, 'E4': 0.9795918367346939, 'E5': 0.5428571428571428, 'E6': 0.59375, 'E7': 0.8405797101449275, 'E8': 0.7142857142857143, 'E9': 0.975, 'E10': 0.975, 'E11': 0.803921568627451, 'E12': 0.875, 'E13': 0.5531914893617021, 'E14': 0.9, 'E15': 0.9, 'E16': 0.9459459459459459, 'E17': 0.8571428571428571, 'E18': 0.7142857142857143, 'E19': 0.631578947368421, 'E20': 0.9705882352941176, 'E21': 0.45, 'E22': 0.5357142857142857, 'E23': 0.8947368421052632, 'E24': 0.9722222222222222, 'E25': 0.782608695652174, 'E26': 0.8103448275862069, 'E27': 0.4, 'E28': 0.5576923076923077, 'E29': 0.7878787878787878, 'E30': 0.7941176470588235, 'E31': 0.734375, 'E32': 0.3076923076923077, 'E33': 0.890625, 'E34': 0.75, 'E35': 0.9285714285714286, 'E36': 0.627906976744186, 'E37': 0.6829268292682927, 'E38': 0.8823529411764706, 'E39': 0.6111111111111112, 'E40': 0.8545454545454545, 'E41': 0.5897435897435898, 'E42': 0.6875, 'E43': 0.38461538461538464, 'E44': 0.8055555555555556, 'E45': 0.6885245901639344, 'E46': 0.8461538461538461, 'E47': 0.717948717948718, 'E48': 0.4878048780487805, 'E49': 0.5625, 'E50': 0.8529411764705882}
+  },
+  'decision_prob_rmse': {
+    name: 'P(Decision) RMSE',
+    data: {'E1': 0.11645512765395992, 'E2': 0.10959776667922755, 'E3': 0.10806365698021866, 'E4': 0.03159496283067561, 'E5': 0.08338304965836114, 'E6': 0.04848299171351407, 'E7': 0.22349273894483837, 'E8': 0.09709057811488107, 'E9': 0.05887496901437444, 'E10': 0.0985518942593626, 'E11': 0.1545682373767181, 'E12': 0.219135968714952, 'E13': 0.07184582403702078, 'E14': 0.16234921661315083, 'E15': 0.10108589543390141, 'E16': 0.08342536777829535, 'E17': 0.07369317452630937, 'E18': 0.06214849810972008, 'E19': 0.07778976531820292, 'E20': 0.05238055751726807, 'E21': 0.06861215320595336, 'E22': 0.04327265964796452, 'E23': 0.08398440078813445, 'E24': 0.04898480655531056, 'E25': 0.0720772951029914, 'E26': 0.09007831771228525, 'E27': 0.05775074439277031, 'E28': 0.04333531850147815, 'E29': 0.18059264005872466, 'E30': 0.1667727562788622, 'E31': 0.0971538983621528, 'E32': 0.06237404910759929, 'E33': 0.11837058996437753, 'E34': 0.0463718081715305, 'E35': 0.12653729449396986, 'E36': 0.08016441288212607, 'E37': 0.05105741715513787, 'E38': 0.058502733821962194, 'E39': 0.12135545849942792, 'E40': 0.13424528189611806, 'E41': 0.09972755585330785, 'E42': 0.06121781104202575, 'E43': 0.08718340849707541, 'E44': 0.048247120778455756, 'E45': 0.07534940377143849, 'E46': 0.07176634960644734, 'E47': 0.06019887535880708, 'E48': 0.053030705541892896, 'E49': 0.13021201541023858, 'E50': 0.06308167088745717}
+  },
+  'green_given_decision_rmse': {
+    name: 'Weighted P(Green|Decision) RMSE',
+    data: {'E1': 0.15115594730722853, 'E2': 0.030376897533456706, 'E3': 0.16946351344696586, 'E4': 0.04705532315078076, 'E5': 0.17624954352250832, 'E6': 0.21487988872240954, 'E7': 0.11928319286934362, 'E8': 0.14864446899023165, 'E9': 0.04600468478173696, 'E10': 0.05293988244476476, 'E11': 0.1679087854734715, 'E12': 0.1500956476586325, 'E13': 0.2541542697883775, 'E14': 0.18345687165959473, 'E15': 0.05689425792740224, 'E16': 0.01837064587216074, 'E17': 0.12557759044433037, 'E18': 0.1405835950545933, 'E19': 0.21733357858494146, 'E20': 0.1269234070168537, 'E21': 0.2801776069138563, 'E22': 0.30954926829221396, 'E23': 0.16271735664359363, 'E24': 0.15043698673520056, 'E25': 0.23557842480215815, 'E26': 0.2402799250965525, 'E27': 0.3493762043721869, 'E28': 0.18090647162312312, 'E29': 0.1493745899203797, 'E30': 0.13843698094784276, 'E31': 0.1212413142344492, 'E32': 0.31705431378961774, 'E33': 0.17165098669199458, 'E34': 0.06416025414862268, 'E35': 0.16681294443067998, 'E36': 0.16102037906229918, 'E37': 0.1844284242136697, 'E38': 0.10026226153271384, 'E39': 0.14482258432513684, 'E40': 0.16457259698994697, 'E41': 0.1290604674513261, 'E42': 0.18257852417982467, 'E43': 0.1988364131587126, 'E44': 0.14935691326489225, 'E45': 0.18038230101313346, 'E46': 0.09829544837379564, 'E47': 0.10394906807921554, 'E48': 0.2000160523641119, 'E49': 0.12404026117248804, 'E50': 0.09013044448217966}
+  },
+  'decision_prob_correlation': {
+    name: 'P(Decision) Correlation',
+    data: {'E1': 0.9877085642889583, 'E2': 0.9730837889871465, 'E3': 0.9859427767304632, 'E4': 0.9972018140155291, 'E5': 0.9766663433206972, 'E6': 0.9940172430640628, 'E7': 0.9531186068850896, 'E8': 0.9743958484615934, 'E9': 0.989804462956383, 'E10': 0.9795217470708596, 'E11': 0.9295471122312214, 'E12': 0.8886137856342735, 'E13': 0.9866003852651137, 'E14': 0.9607694406605494, 'E15': 0.9768759516675206, 'E16': 0.9846872221876833, 'E17': 0.9745315601827056, 'E18': 0.9930307345419688, 'E19': 0.9848725753044323, 'E20': 0.989442010735715, 'E21': 0.9852322703862751, 'E22': 0.9919259239942989, 'E23': 0.9894476394268169, 'E24': 0.9940953513248872, 'E25': 0.9762507106871039, 'E26': 0.9790412384076803, 'E27': 0.9864222432165992, 'E28': 0.9925992409567144, 'E29': 0.9419342485640307, 'E30': 0.9552319557175977, 'E31': 0.9605707929535688, 'E32': 0.9970441229119588, 'E33': 0.9504705693126386, 'E34': 0.9938718067780412, 'E35': 0.965543398762173, 'E36': 0.9720121415914943, 'E37': 0.991030919235139, 'E38': 0.9918672857269072, 'E39': 0.9775742775992579, 'E40': 0.9490824144893617, 'E41': 0.9599023828449412, 'E42': 0.9953322457960213, 'E43': 0.9735222894858598, 'E44': 0.9914492457731215, 'E45': 0.9778010978862502, 'E46': 0.9875266157928179, 'E47': 0.9900002807171802, 'E48': 0.9836856810865436, 'E49': 0.9664524903292344, 'E50': 0.9770619273499164}
+  },
+  'green_given_decision_correlation': {
+    name: 'Weighted P(Green|Decision) Correlation',
+    data: {'E1': 0.8647962739015834, 'E2': NaN, 'E3': 0.7248987885236223, 'E4': NaN, 'E5': 0.6998588958162267, 'E6': 0.8811620525622876, 'E7': 0.7549942488847233, 'E8': 0.9136562833630189, 'E9': 0.7882960183655919, 'E10': 0.530582566340881, 'E11': 0.8775912333467095, 'E12': 0.911588347675964, 'E13': 0.8683284662853354, 'E14': 0.682658243204618, 'E15': 0.9020772232498255, 'E16': 0.9407026913469139, 'E17': 0.8875626415948444, 'E18': 0.9750237445725031, 'E19': 0.9307893435251615, 'E20': 0.8984331592792697, 'E21': 0.7623244317481664, 'E22': 0.9270801437582691, 'E23': 0.8473424709159019, 'E24': 0.8355706245053931, 'E25': 0.9879276820167902, 'E26': 0.9355833029641036, 'E27': 0.9377385189407956, 'E28': 0.8747574067046868, 'E29': 0.7341395339697686, 'E30': 0.8566644985530575, 'E31': 0.8877241779675379, 'E32': 0.9468309752670278, 'E33': 0.5360872209696301, 'E34': 0.9662584396172288, 'E35': 0.25762034237908166, 'E36': 0.7872276849177793, 'E37': 0.9045138628838812, 'E38': 0.9580526800087992, 'E39': 0.7413532211956542, 'E40': 0.9490293431348409, 'E41': 0.8596921029375085, 'E42': 0.8176932000286411, 'E43': 0.9444403975530367, 'E44': 0.9535028528965529, 'E45': 0.878065591623713, 'E46': 0.9367353001628347, 'E47': 0.9644365263766251, 'E48': 0.4591608780228287, 'E49': 0.9228301250890915, 'E50': 0.9611842345691115}
   }
 };
 
+// Metrics where higher values are better (sorted descending)
+const higherBetterMetrics = new Set([
+  'discrete_mutual_information',
+  'red_green_ordering',
+  'decision_prob_correlation',
+  'green_given_decision_correlation'
+]);
+
 // Enable/disable metrics - set to false to hide a metric from the dropdown
 const metricsEnabled = {
-  'rmse_RGU': false,
+  'rmse_RGU': true,
   'rmse_RG': true,
-  'rmse_(|R-G|)': false,
-  'rmse_(R-G)': false,
-  'KL_divergence': false,
-  'discrete_mutual_information': false,
-  'red_green_ordering': false
+  'rmse_(|R-G|)': true,
+  'rmse_(R-G)': true,
+  'KL_divergence': true,
+  'discrete_mutual_information': true,
+  'red_green_ordering': true,
+  'decision_prob_rmse': true,
+  'green_given_decision_rmse': true,
+  'decision_prob_correlation': true,
+  'green_given_decision_correlation': true
 };
 
 function TrialByTrialPage() {
@@ -63,20 +91,34 @@ function TrialByTrialPage() {
     }
 
     const metricData = metricsData[selectedMetric].data;
-    // For mutual information, higher is better; for other metrics, lower is better
-    const isHigherBetter = selectedMetric === 'discrete_mutual_information' || selectedMetric === 'red_green_ordering';
-    const trialsWithLoss = allTrials
-      .map(trial => ({
+    const isHigherBetter = higherBetterMetrics.has(selectedMetric);
+
+    // Build list with possible NaNs/undefined marked as null, then:
+    // - sort only valid values
+    // - append invalid ones at the end with no ranking
+    const trialsWithLoss = allTrials.map(trial => {
+      const raw = metricData[trial];
+      const isValidNumber = typeof raw === 'number' && !Number.isNaN(raw);
+      return {
         trial,
-        loss: metricData[trial] || (isHigherBetter ? -Infinity : Infinity)
-      }))
+        loss: isValidNumber ? raw : null
+      };
+    });
+
+    const validTrials = trialsWithLoss
+      .filter(item => item.loss !== null)
       .sort((a, b) => isHigherBetter ? b.loss - a.loss : a.loss - b.loss); // Sort from best to worst
 
-    const sorted = trialsWithLoss.map(item => item.trial);
+    const invalidTrials = trialsWithLoss.filter(item => item.loss === null);
+
+    const sorted = [
+      ...validTrials.map(item => item.trial),
+      ...invalidTrials.map(item => item.trial)
+    ];
     const rankings = {};
     const losses = {};
 
-    trialsWithLoss.forEach((item, index) => {
+    validTrials.forEach((item, index) => {
       rankings[item.trial] = index + 1;
       losses[item.trial] = item.loss;
     });
@@ -430,6 +472,13 @@ function TrialByTrialPage() {
           const ranking = trialRankings[trialName];
           const loss = trialLosses[trialName];
           const showRanking = selectedMetric && ranking !== undefined;
+          const metricValue =
+            selectedMetric && metricsData[selectedMetric]
+              ? metricsData[selectedMetric].data[trialName]
+              : undefined;
+          const metricIsInvalid =
+            !!selectedMetric &&
+            (typeof metricValue !== 'number' || Number.isNaN(metricValue));
           
           return (
             <div
@@ -509,14 +558,32 @@ function TrialByTrialPage() {
                 }}>
                   {trialName}
                 </div>
-                {showRanking && loss !== undefined && (
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#64748b',
-                    fontWeight: '500'
-                  }}>
-                    {(selectedMetric === 'discrete_mutual_information' || selectedMetric === 'red_green_ordering') ? 'Value' : 'Loss'}: {loss.toFixed(6)}
-                  </div>
+                {selectedMetric && (
+                  metricIsInvalid ? (
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#b91c1c',
+                      fontWeight: '500',
+                      textAlign: 'center'
+                    }}>
+                      Metric invalid for this trial
+                    </div>
+                  ) : (
+                    showRanking && loss !== undefined && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#64748b',
+                        fontWeight: '500'
+                      }}>
+                        {(selectedMetric === 'discrete_mutual_information' ||
+                          selectedMetric === 'red_green_ordering' ||
+                          selectedMetric === 'decision_prob_correlation' ||
+                          selectedMetric === 'green_given_decision_correlation')
+                          ? 'Value'
+                          : 'Loss'}: {loss.toFixed(6)}
+                      </div>
+                    )
+                  )
                 )}
               </div>
             </div>
