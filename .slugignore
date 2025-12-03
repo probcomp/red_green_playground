@@ -4,7 +4,6 @@
 # Python files (not needed for Node.js app)
 *.py
 __pycache__/
-requirements.txt
 
 # Development and test files
 slides/
@@ -32,7 +31,4 @@ README.md
 # Git files
 .git/
 .gitignore
-
-# Other unnecessary files
-red_green_playground.py
 
