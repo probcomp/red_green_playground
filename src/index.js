@@ -8,6 +8,8 @@ import Cogsci2025TunedPage from './components/Cogsci2025TunedPage';
 import TrialByTrialPage from './components/TrialByTrialPage';
 import AggregatedResultsPage from './components/AggregatedResultsPage';
 import CandidateTrialsPage from './components/CandidateTrialsPage';
+import DiameterTrialByTrialPage from './components/DiameterTrialByTrialPage';
+import DiameterAggregatedPage from './components/DiameterAggregatedPage';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -21,6 +23,8 @@ root.render(
         <Route path="/jtap/cogsci2025-tuned/trial-by-trial" element={<TrialByTrialPage />} />
         <Route path="/jtap/cogsci2025-tuned/aggregated" element={<AggregatedResultsPage />} />
         <Route path="/jtap/candidate-trials" element={<CandidateTrialsPage />} />
+        <Route path="/jtap/diameter/:diameter/trial-by-trial" element={<DiameterTrialByTrialPage />} />
+        <Route path="/jtap/diameter/:diameter/aggregated" element={<DiameterAggregatedPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

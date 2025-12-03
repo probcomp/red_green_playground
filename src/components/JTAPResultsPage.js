@@ -1,6 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+// Diameter configurations
+const diameters = ['0_5', '0_8', '0_9', '0_925', '0_95', '0_975', '0_99'];
+
+const formatDiameter = (d) => {
+  const num = d.replace('_', '.');
+  return `${(parseFloat(num) * 100).toFixed(2)}%`;
+};
+
 function JTAPResultsPage() {
   return (
     <div style={{
@@ -181,6 +189,134 @@ function JTAPResultsPage() {
             </p>
           </div>
           </Link>
+        </div>
+
+        {/* Diameter Results Section */}
+        <h2 style={{
+          fontSize: '36px',
+          fontWeight: '700',
+          color: '#1e293b',
+          marginTop: '60px',
+          marginBottom: '24px',
+          letterSpacing: '-0.025em'
+        }}>
+          Diameter Variations
+        </h2>
+        <p style={{
+          fontSize: '18px',
+          color: '#64748b',
+          marginBottom: '32px',
+          lineHeight: '1.6'
+        }}>
+          Results for different simulation diameters (as percentage of original diameter).
+        </p>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '24px',
+          marginBottom: '40px'
+        }}>
+          {diameters.map((diameter) => (
+            <div
+              key={diameter}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '32px',
+                border: '2px solid #e2e8f0',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}
+            >
+              <h3 style={{
+                fontSize: '22px',
+                fontWeight: '600',
+                color: '#1e293b',
+                margin: 0
+              }}>
+                {formatDiameter(diameter)} Diameter
+              </h3>
+              <p style={{
+                fontSize: '14px',
+                color: '#64748b',
+                margin: 0,
+                lineHeight: '1.6'
+              }}>
+                Trial-by-trial plots and aggregated results for {formatDiameter(diameter)} of original diameter.
+              </p>
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                marginTop: '8px'
+              }}>
+                <Link
+                  to={`/jtap/diameter/${diameter}/trial-by-trial`}
+                  style={{
+                    flex: 1,
+                    textDecoration: 'none',
+                    color: 'inherit'
+                  }}
+                >
+                  <div style={{
+                    padding: '12px 16px',
+                    backgroundColor: '#eff6ff',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#3b82f6',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#dbeafe';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#eff6ff';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                  >
+                    Trial-by-Trial
+                  </div>
+                </Link>
+                <Link
+                  to={`/jtap/diameter/${diameter}/aggregated`}
+                  style={{
+                    flex: 1,
+                    textDecoration: 'none',
+                    color: 'inherit'
+                  }}
+                >
+                  <div style={{
+                    padding: '12px 16px',
+                    backgroundColor: '#f3e8ff',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#8b5cf6',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e9d5ff';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3e8ff';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                  >
+                    Aggregated
+                  </div>
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
