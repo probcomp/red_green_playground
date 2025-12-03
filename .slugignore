@@ -1,0 +1,38 @@
+# Exclude source files after build (they're compiled into build/)
+# Note: Keep src/ for build process, but exclude after build if possible
+
+# Python files (not needed for Node.js app)
+*.py
+__pycache__/
+requirements.txt
+
+# Development and test files
+slides/
+*.test.js
+*.test.jsx
+*.spec.js
+*.spec.jsx
+
+# Documentation
+README.md
+*.md
+
+# Development config files
+.env.local
+.env.development
+.env.test
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git files
+.git/
+.gitignore
+
+# Other unnecessary files
+red_green_playground.py
+
