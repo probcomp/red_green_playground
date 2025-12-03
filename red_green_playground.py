@@ -24,6 +24,7 @@ GLOBAL_SIM_DATA = None
 
 # Define the path to the React build folder relative to this file
 build_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
+assets_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 # Flask app initialization
 app = Flask(__name__, static_folder=os.path.join(build_path, "static"))
@@ -608,14 +609,21 @@ def index():
 def serve_static_files(path):
     """
     Serve static files such as JS, CSS, and assets.
+    First checks build folder, then assets folder, then falls back to index.html for React Router.
     """
-    file_path = os.path.join(build_path, path)
+    # First check build folder
+    build_file_path = os.path.join(build_path, path)
+    if os.path.exists(build_file_path):
+        return send_from_directory(build_path, path)
+    
+    # Then check assets folder
+    assets_file_path = os.path.join(assets_path, path)
+    if os.path.exists(assets_file_path):
+        return send_from_directory(assets_path, path)
+    
+    # Fall back to index.html for React Router paths
     try:
-        if os.path.exists(file_path):
-            return send_from_directory(build_path, path)
-        else:
-            # Serve index.html for React Router paths
-            return send_from_directory(build_path, "index.html")
+        return send_from_directory(build_path, "index.html")
     except Exception as e:
         print(f"Error serving static file {path}: {e}")
         return "File not found", 404

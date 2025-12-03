@@ -1,9 +1,9 @@
 # Exclude source files after build (they're compiled into build/)
 # Note: Keep src/ for build process, but exclude after build if possible
 
-# Public folder - contents are copied to build/ during build process
-# Excluding to avoid duplication in the slug
-public/
+# Assets folder - large image/video directories moved here to avoid duplication
+# These are served directly by the server, not copied to build/
+assets/
 
 # Python files (not needed for Node.js app)
 *.py
