@@ -59,7 +59,7 @@ const higherBetterMetrics = new Set([
 
 // Enable/disable metrics - set to false to hide a metric from the dropdown
 const metricsEnabled = {
-  'rmse_RGU': true,
+  'rmse_RGU': false,
   'rmse_RG': true,
   'rmse_(|R-G|)': true,
   'rmse_(R-G)': true,
