@@ -1,6 +1,10 @@
 # Exclude source files after build (they're compiled into build/)
 # Note: Keep src/ for build process, but exclude after build if possible
 
+# Public folder - contents are copied to build/ during build process
+# Excluding to avoid duplication in the slug
+public/
+
 # Python files (not needed for Node.js app)
 *.py
 __pycache__/
