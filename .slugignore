@@ -6,7 +6,6 @@
 assets/
 
 # Python files (not needed for Node.js app)
-*.py
 __pycache__/
 
 # Development and test files
