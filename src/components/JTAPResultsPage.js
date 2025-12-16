@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 // Diameter configurations
-const diameters = ['0_5', '0_8', '0_9', '0_925', '0_95', '0_975', '0_99'];
+const diameters = ['0_5', '0_8', '0_9', '0_925', '0_95', '0_99'];
 
 const formatDiameter = (d) => {
   const num = d.replace('_', '.');
