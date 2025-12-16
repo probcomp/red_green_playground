@@ -3,7 +3,7 @@
 
 # Assets folder - large image/video directories moved here to avoid duplication
 # These are served directly by the server, not copied to build/
-assets/
+
 
 # Python files (not needed for Node.js app)
 __pycache__/
