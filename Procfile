@@ -1,1 +1,1 @@
-web: python red_green_playground.py
+web: uv run python red_green_playground.py
