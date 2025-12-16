@@ -63,7 +63,7 @@ function DiameterTrialByTrialPage() {
   // Format diameter for display (e.g., "0_95" -> "95%")
   const formatDiameter = (d) => {
     const num = d.replace('_', '.');
-    return `${(parseFloat(num) * 100).toFixed(0)}%`;
+    return `${(parseFloat(num) * 100).toFixed(2)}%`;
   };
 
   return (

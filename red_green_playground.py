@@ -139,12 +139,18 @@ def simulate_key_distractor(keyDistractor, sim_data, worldWidth, worldHeight, TI
         tx, ty = body.position.x - radius, body.position.y - radius
         global_frame = startFrame + frame
         
+        # Scale velocity by ballSpeed to reflect actual speed in diameters/second
+        # The physics simulation uses velocities scaled by distractor_speed/ballSpeed,
+        # so multiplying by ballSpeed gives us the actual distractor_speed
+        vx_scaled = body.velocity.x * ballSpeed
+        vy_scaled = body.velocity.y * ballSpeed
+        
         # No collision stopping for key distractors - they can overlap with the regular ball
         distractor_data['step_data'][global_frame] = {
             'x': tx,
             'y': ty,
-            'vx': body.velocity.x,
-            'vy': body.velocity.y
+            'vx': vx_scaled,
+            'vy': vy_scaled
         }
     
     return distractor_data
@@ -398,8 +404,13 @@ def run_simulation_with_visualization(entities, simulationParams, distractorPara
                     r = shape.radius
                     tx, ty  = body.position.x - r, body.position.y - r
                     vx, vy  = body.velocity.x, body.velocity.y
-                    speed = np.sqrt(vx**2 + vy**2)
-                    direction = np.atan2(vy,vx)
+                    # Scale velocity by ballSpeed to reflect actual speed in diameters/second
+                    # The physics simulation uses normalized velocities (magnitude 1), but we want
+                    # to save the actual speed values
+                    vx_scaled = vx * ballSpeed
+                    vy_scaled = vy * ballSpeed
+                    speed = np.sqrt(vx_scaled**2 + vy_scaled**2)
+                    direction = np.atan2(vy_scaled, vx_scaled)
                     # x_vals_discrete = np.arange(0, worldWidth, interval)
                     # y_vals_discrete = np.arange(0, worldHeight, interval)
                     
@@ -412,8 +423,8 @@ def run_simulation_with_visualization(entities, simulationParams, distractorPara
                         'y' : ty,
                         'speed' : speed,
                         'dir' : direction,
-                        'vx' : vx,
-                        'vy' : vy
+                        'vx' : vx_scaled,
+                        'vy' : vy_scaled
                     }
 
         # NOTE: NEED TO PROCESS THIS IN RED AND IN GREEN!!!!!

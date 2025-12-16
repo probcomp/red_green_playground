@@ -317,6 +317,7 @@ function JTAPResultsPage() {
               </div>
             </div>
           ))}
+          
         </div>
       </div>
     </div>
