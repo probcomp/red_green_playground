@@ -11,7 +11,7 @@ local build of the red-green playground, here are the instructions.
 Before you begin, ensure you have the following installed:
 - Conda (for Python environment management)
 - Git
-- Node.js v23.3.0 and npm 10.9.0 (npm comes bundled with Node.js)
+- Node.js v24.12.0 (Active LTS) and npm 11.6.2 (npm comes bundled with Node.js)
 
 ### 1. Clone the Repository
 ```bash
@@ -28,12 +28,12 @@ pip install -r requirements.txt
 
 ### 3. Install Node.js and npm
 
-Install Node.js v23.3.0 from [nodejs.org](https://nodejs.org/). npm 10.9.0 comes bundled with Node.js.
+Install Node.js v24.12.0 (Active LTS) from [nodejs.org](https://nodejs.org/). npm 11.6.2 comes bundled with Node.js.
 
 Verify installation:
 ```bash
-node --version  # Should be v23.3.0
-npm --version   # Should be 10.9.0
+node --version  # Should be v24.12.0
+npm --version   # Should be 11.6.2
 ```
 
 ### 4. Set Up and Run the Frontend

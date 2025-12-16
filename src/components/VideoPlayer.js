@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from "react";
 import { Rnd } from "react-rnd";
 
 const VideoPlayer = forwardRef(({ 
@@ -29,7 +29,6 @@ const VideoPlayer = forwardRef(({
   const [distractorDuration, setDistractorDuration] = useState(1.0);
   const [distractorSpeed, setDistractorSpeed] = useState(3.6);
   const [distractorPosition, setDistractorPosition] = useState(null);
-  const [isDraggingDistractorDirection, setIsDraggingDistractorDirection] = useState(false);
   const [disguiseDistractors, setDisguiseDistractors] = useState(false);
   const [liftUpTarget, setLiftUpTarget] = useState(false);
 
@@ -58,7 +57,7 @@ const VideoPlayer = forwardRef(({
     displayWidth = maxDisplaySize * aspectRatio;
   }
 
-  const downloadWebM = async () => {
+  const downloadWebM = useCallback(async () => {
     if (!simData) {
       console.error("No simulation data available for download");
       return Promise.reject(new Error("No simulation data available"));
@@ -443,7 +442,8 @@ const VideoPlayer = forwardRef(({
       setIsRecording(false);
       throw error;
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simData, canvasWidth, canvasHeight, simWorldWidth, simWorldHeight, numFrames, fps, trial_name, saveDirectoryHandle, disguiseDistractors, liftUpTarget, setIsRecording]);
 
   // Expose downloadWebM function to parent component
   useImperativeHandle(ref, () => ({
@@ -737,7 +737,7 @@ const VideoPlayer = forwardRef(({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseDistractors, liftUpTarget]);
+  }, [isPlaying, simData, currentFrame, numFrames, canvasWidth, canvasHeight, worldWidth, worldHeight, interval, fps, disguiseDistractors, liftUpTarget, simWorldWidth, simWorldHeight]);
 
   // Pre-populate editing interface when editing a distractor
   useEffect(() => {
@@ -989,9 +989,8 @@ const VideoPlayer = forwardRef(({
               };
             })()}
             bounds="parent"
-            onDragStart={() => setIsDraggingDistractorDirection(true)}
+            onDragStart={() => {}}
             onDragStop={(e, d) => {
-              setIsDraggingDistractorDirection(false);
               const radius = simData.target.size / 2;
               const px_scale_x = displayWidth / simWorldWidth;
               const px_scale_y = displayHeight / simWorldHeight;
