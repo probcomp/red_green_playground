@@ -12,7 +12,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import vonmises
-from IPython.display import HTML as HTML_Display
 import matplotlib
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt

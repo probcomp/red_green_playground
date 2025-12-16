@@ -9,9 +9,10 @@ This site is not meant for development from others, but in case anybody wants a
 local build of the red-green playground, here are the instructions.
 
 Before you begin, ensure you have the following installed:
-- Conda (for Python environment management)
+- Python 3.11 or later
+- uv (Python package manager) - install from [astral.sh/uv](https://docs.astral.sh/uv/)
 - Git
-- Node.js v24.12.0 (Active LTS) and npm 11.6.2 (npm comes bundled with Node.js)
+- Node.js v24.x (Active LTS) and npm (npm comes bundled with Node.js)
 
 ### 1. Clone the Repository
 ```bash
@@ -21,19 +22,17 @@ cd red_green_playground
 
 ### 2. Set Up Python Environment
 ```bash
-conda create -n playground python=3.11
-conda activate playground
-pip install -r requirements.txt
+uv sync
 ```
 
 ### 3. Install Node.js and npm
 
-Install Node.js v24.12.0 (Active LTS) from [nodejs.org](https://nodejs.org/). npm 11.6.2 comes bundled with Node.js.
+Install Node.js v24.x (Active LTS) from [nodejs.org](https://nodejs.org/). npm comes bundled with Node.js.
 
 Verify installation:
 ```bash
-node --version  # Should be v24.12.0
-npm --version   # Should be 11.6.2
+node --version  # Should be v24.x
+npm --version
 ```
 
 ### 4. Set Up and Run the Frontend
@@ -54,14 +53,11 @@ The website should automatically open in your default browser at `http://localho
 
 In a new terminal window (while keeping the frontend running):
 
-1. Make sure you're in the project root directory and the conda environment is activated:
-```bash
-conda activate playground
-```
+1. Make sure you're in the project root directory.
 
-2. Start the Flask server:
+2. Start the Flask server using `uv`:
 ```bash
-python red_green_playground.py
+uv run python red_green_playground.py
 ```
 
 The backend will run on `http://localhost:5001`.
