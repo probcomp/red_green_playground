@@ -1,1 +1,1 @@
-web: npm run build && python red_green_playground.py
+web: python red_green_playground.py
