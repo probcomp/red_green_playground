@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 import os
+import subprocess
+import tempfile
 
 # PHYSICS SIM
 
@@ -671,6 +673,97 @@ def clear_simulation():
     GLOBAL_SIM_DATA = None
     print("Simulation cleared successfully.")
     return jsonify({"status": "success", "message": "Simulation cleared."})
+
+@app.route('/convert_to_mp4', methods=['POST'])
+def convert_to_mp4():
+    """
+    Convert WebM video to MP4 using FFmpeg.
+    Expects a multipart/form-data request with a 'video' file field.
+    Returns the MP4 file as a download.
+    """
+    try:
+        if 'video' not in request.files:
+            return jsonify({"status": "error", "message": "No video file provided"}), 400
+        
+        webm_file = request.files['video']
+        if webm_file.filename == '':
+            return jsonify({"status": "error", "message": "No file selected"}), 400
+        
+        # Create temporary files for input and output
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_webm:
+            webm_path = temp_webm.name
+            webm_file.save(webm_path)
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_mp4:
+            mp4_path = temp_mp4.name
+        
+        try:
+            # Check if FFmpeg is available
+            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Clean up temp files
+            os.unlink(webm_path)
+            os.unlink(mp4_path)
+            return jsonify({
+                "status": "error", 
+                "message": "FFmpeg is not installed or not available in PATH. Please install FFmpeg to use MP4 conversion."
+            }), 500
+        
+        # Convert WebM to MP4 using FFmpeg
+        # Using H.264 codec with good quality settings
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', webm_path,  # Input file
+            '-c:v', 'libx264',  # Video codec (H.264)
+            '-preset', 'medium',  # Encoding speed/quality tradeoff
+            '-crf', '23',  # Quality (18-28 range, lower = better quality)
+            '-pix_fmt', 'yuv420p',  # Pixel format for compatibility
+            '-movflags', '+faststart',  # Optimize for web streaming
+            '-y',  # Overwrite output file
+            mp4_path  # Output file
+        ]
+        
+        result = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True
+        )
+        
+        # Clean up input file
+        os.unlink(webm_path)
+        
+        if result.returncode != 0:
+            # Clean up output file on error
+            if os.path.exists(mp4_path):
+                os.unlink(mp4_path)
+            print(f"FFmpeg error: {result.stderr}")
+            return jsonify({
+                "status": "error",
+                "message": f"FFmpeg conversion failed: {result.stderr[:200]}"
+            }), 500
+        
+        # Send the MP4 file
+        return send_file(
+            mp4_path,
+            mimetype='video/mp4',
+            as_attachment=True,
+            download_name=webm_file.filename.replace('.webm', '.mp4')
+        )
+        
+    except Exception as e:
+        # Clean up temp files on error
+        if 'webm_path' in locals() and os.path.exists(webm_path):
+            os.unlink(webm_path)
+        if 'mp4_path' in locals() and os.path.exists(mp4_path):
+            os.unlink(mp4_path)
+        
+        print(f"Error converting video: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "status": "error",
+            "message": f"Conversion error: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

@@ -217,6 +217,7 @@ export const createSaveDataHandler = ({
   trial_name,
   saveDirectoryHandle,
   autoDownloadWebM,
+  videoFormat,
   videoPlayerRef
 }) => {
   return async () => {
@@ -259,13 +260,23 @@ export const createSaveDataHandler = ({
         const userConfirmed = window.confirm(`The trial directory "${trial_name}" already exists in the save directory. Do you want to override it?`);
         if (!userConfirmed) return;
         if (existingTrialDirHandle) {
-          const filesToRemove = [`${trial_name}.webm`, `${trial_name}_stimulus.webm`, `${trial_name}_revealed.webm`];
+          // Remove both WebM and MP4 files to handle format changes
+          const extensions = ['webm', 'mp4'];
+          const baseNames = [`${trial_name}`, `${trial_name}_stimulus`, `${trial_name}_revealed`];
+          const filesToRemove = [];
+          baseNames.forEach(base => {
+            extensions.forEach(ext => {
+              filesToRemove.push(`${base}.${ext}`);
+            });
+          });
+          
           for (const filename of filesToRemove) {
             try {
               await existingTrialDirHandle.removeEntry(filename, { recursive: false });
-              console.log(`Removed existing WebM file: ${filename}`);
+              console.log(`Removed existing video file: ${filename}`);
             } catch (error) {
-              console.log(`No existing WebM file to remove (${filename}):`, error);
+              // File doesn't exist, which is fine
+              console.log(`No existing video file to remove (${filename}):`, error);
             }
           }
         }

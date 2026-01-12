@@ -15,7 +15,8 @@ const VideoPlayer = forwardRef(({
   setSelectedFrame = () => {},
   keyDistractors = [],
   editingDistractorIndex = null,
-  onAddKeyDistractor = () => {}
+  onAddKeyDistractor = () => {},
+  videoFormat = "mp4" // "webm" or "mp4"
 }, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -108,19 +109,49 @@ const VideoPlayer = forwardRef(({
             const webmBlob = new Blob(chunks, { type: 'video/webm' });
             
             try {
+              let finalBlob = webmBlob;
+              let finalFilename = filename;
+              
+              // Convert to MP4 if requested
+              if (videoFormat === "mp4") {
+                try {
+                  const formData = new FormData();
+                  formData.append('video', webmBlob, filename);
+                  
+                  const response = await fetch('/convert_to_mp4', {
+                    method: 'POST',
+                    body: formData
+                  });
+                  
+                  if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Conversion failed' }));
+                    throw new Error(errorData.message || 'MP4 conversion failed');
+                  }
+                  
+                  finalBlob = await response.blob();
+                  finalFilename = filename.replace('.webm', '.mp4');
+                } catch (conversionError) {
+                  console.error("MP4 conversion error:", conversionError);
+                  // Fallback to WebM if conversion fails
+                  alert(`MP4 conversion failed: ${conversionError.message}. Falling back to WebM format.`);
+                  finalBlob = webmBlob;
+                  finalFilename = filename;
+                }
+              }
+              
               // If saveDirectoryHandle is available, save to the selected directory
               if (saveDirectoryHandle) {
                 const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
-                const videoFileHandle = await trialDirHandle.getFileHandle(filename, { create: true });
+                const videoFileHandle = await trialDirHandle.getFileHandle(finalFilename, { create: true });
                 const videoWritable = await videoFileHandle.createWritable();
-                await videoWritable.write(webmBlob);
+                await videoWritable.write(finalBlob);
                 await videoWritable.close();
               } else {
-                // Download WebM file directly
-                const url = URL.createObjectURL(webmBlob);
+                // Download video file directly
+                const url = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = filename;
+                a.download = finalFilename;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -423,6 +454,7 @@ const VideoPlayer = forwardRef(({
     try {
       // Record stimulus version (everything is blue ball, occlusion works)
       // disguiseDistractors = true, liftUpTarget = false
+      // Always record as WebM first, conversion happens in onstop handler
       await recordVideo(
         { disguiseDistractors: true, liftUpTarget: false },
         `${trial_name}_stimulus.webm`
@@ -443,7 +475,7 @@ const VideoPlayer = forwardRef(({
       throw error;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [simData, canvasWidth, canvasHeight, simWorldWidth, simWorldHeight, numFrames, fps, trial_name, saveDirectoryHandle, disguiseDistractors, liftUpTarget, setIsRecording]);
+  }, [simData, canvasWidth, canvasHeight, simWorldWidth, simWorldHeight, numFrames, fps, trial_name, saveDirectoryHandle, disguiseDistractors, liftUpTarget, setIsRecording, videoFormat]);
 
   // Expose downloadWebM function to parent component
   useImperativeHandle(ref, () => ({
@@ -1238,7 +1270,7 @@ const VideoPlayer = forwardRef(({
               }
             }}
           >
-            {isRecording ? "🔄 Recording..." : "📥 Download WebM"}
+            {isRecording ? "🔄 Recording..." : `📥 Download ${videoFormat.toUpperCase()}`}
           </button>
         </div>
         

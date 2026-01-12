@@ -35,6 +35,7 @@ function App() {
   const [trial_name, setTrial_name] = useState('base');
   const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null);
   const [autoDownloadWebM, setAutoDownloadWebM] = useState(true);
+  const [videoFormat, setVideoFormat] = useState('mp4'); // 'webm' or 'mp4'
 
   // Scene transformation controls
   const [movementUnit, setMovementUnit] = useState(1.0);
@@ -148,6 +149,7 @@ function App() {
     trial_name,
     saveDirectoryHandle,
     autoDownloadWebM,
+    videoFormat,
     videoPlayerRef
   });
 
@@ -357,6 +359,7 @@ function App() {
                 keyDistractors={keyDistractors}
                 editingDistractorIndex={editingDistractorIndex}
                 onAddKeyDistractor={handleAddKeyDistractor}
+                videoFormat={videoFormat}
                 ref={videoPlayerRef}
               />
             ) : (
@@ -397,6 +400,8 @@ function App() {
         onSetSaveDirectory={handleSetSaveDirectory}
         autoDownloadWebM={autoDownloadWebM}
         onAutoDownloadWebMChange={setAutoDownloadWebM}
+        videoFormat={videoFormat}
+        onVideoFormatChange={setVideoFormat}
         onSaveData={handleSavedata}
         onFileLoad={handleFileLoad}
         onClearAll={handleClearAll}

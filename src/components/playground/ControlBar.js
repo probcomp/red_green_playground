@@ -11,6 +11,8 @@ const ControlBar = ({
   onSetSaveDirectory,
   autoDownloadWebM,
   onAutoDownloadWebMChange,
+  videoFormat,
+  onVideoFormatChange,
   onSaveData,
   onFileLoad,
   onClearAll
@@ -299,21 +301,46 @@ const ControlBar = ({
               📂 {saveDirectoryHandle.name}
             </div>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <input
-              type="checkbox"
-              checked={autoDownloadWebM}
-              onChange={(e) => onAutoDownloadWebMChange(e.target.checked)}
-              style={{ 
-                margin: 0,
-                width: "14px",
-                height: "14px",
-                accentColor: "#3b82f6"
-              }}
-            />
-            <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "500" }}>
-              Auto-download WebM
-            </label>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "600", marginRight: "4px" }}>
+                Format:
+              </label>
+              <select
+                value={videoFormat}
+                onChange={(e) => onVideoFormatChange(e.target.value)}
+                style={{
+                  padding: "4px 8px",
+                  border: "2px solid #475569",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  outline: "none",
+                  backgroundColor: "#1e293b",
+                  color: "#f1f5f9",
+                  fontWeight: "500",
+                  cursor: "pointer"
+                }}
+              >
+                <option value="webm">WebM</option>
+                <option value="mp4">MP4</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <input
+                type="checkbox"
+                checked={autoDownloadWebM}
+                onChange={(e) => onAutoDownloadWebMChange(e.target.checked)}
+                style={{ 
+                  margin: 0,
+                  width: "14px",
+                  height: "14px",
+                  accentColor: "#3b82f6"
+                }}
+              />
+              <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "500" }}>
+                Auto-download Video
+              </label>
+            </div>
           </div>
           <button
             onClick={onSaveData}

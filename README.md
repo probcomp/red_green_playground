@@ -13,6 +13,7 @@ Before you begin, ensure you have the following installed:
 - uv (Python package manager) - install from [astral.sh/uv](https://docs.astral.sh/uv/)
 - Git
 - Node.js v24.x (Active LTS) and npm (npm comes bundled with Node.js)
+- FFmpeg (optional, for MP4 video conversion) - install from [ffmpeg.org](https://ffmpeg.org/download.html)
 
 ### 1. Clone the Repository
 ```bash
@@ -66,6 +67,13 @@ The backend will run on `http://localhost:5001`.
 
 When ready, push to Heroku (only for authenticated user --> Arijit)
 
+**Note:** FFmpeg is automatically installed on Heroku via the `heroku-buildpack-ffmpeg-latest` buildpack, which is already configured for this app. This enables MP4 video conversion functionality.
+
 ```bash
 git push heroku main
+```
+
+To verify FFmpeg is available after deployment:
+```bash
+heroku run ffmpeg -version
 ```
