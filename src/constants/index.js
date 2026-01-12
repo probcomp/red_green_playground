@@ -57,4 +57,5 @@ export const MODES = {
 export const DEFAULT_TRIAL_NAME = 'base';
 
 // Do not worry, this is a public URL that is used to serve the assets from AWS S3. It is not a secret, and can be seen by anyone.
+// For detailed asset structure documentation, see ASSETS_STRUCTURE.md
 export const ASSETS_BASE_PATH = 'https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets';
