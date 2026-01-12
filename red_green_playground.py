@@ -690,9 +690,17 @@ def convert_to_mp4():
             return jsonify({"status": "error", "message": "No file selected"}), 400
         
         # Create temporary files for input and output
+        # Stream file to disk in chunks to avoid loading entire file into memory
         with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_webm:
             webm_path = temp_webm.name
-            webm_file.save(webm_path)
+            # Stream in chunks to reduce memory usage
+            chunk_size = 8192  # 8KB chunks
+            while True:
+                chunk = webm_file.stream.read(chunk_size)
+                if not chunk:
+                    break
+                temp_webm.write(chunk)
+            temp_webm.flush()
         
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_mp4:
             mp4_path = temp_mp4.name
@@ -710,15 +718,17 @@ def convert_to_mp4():
             }), 500
         
         # Convert WebM to MP4 using FFmpeg
-        # Using H.264 codec with good quality settings
+        # Using H.264 codec with memory-efficient settings for Heroku
         ffmpeg_cmd = [
             'ffmpeg',
             '-i', webm_path,  # Input file
             '-c:v', 'libx264',  # Video codec (H.264)
-            '-preset', 'medium',  # Encoding speed/quality tradeoff
+            '-preset', 'ultrafast',  # Fastest preset (uses less memory than medium)
             '-crf', '23',  # Quality (18-28 range, lower = better quality)
             '-pix_fmt', 'yuv420p',  # Pixel format for compatibility
             '-movflags', '+faststart',  # Optimize for web streaming
+            '-threads', '1',  # Limit to single thread to reduce memory usage
+            '-max_muxing_queue_size', '1024',  # Limit muxing queue size
             '-y',  # Overwrite output file
             mp4_path  # Output file
         ]
