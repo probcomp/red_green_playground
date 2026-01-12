@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
 import VideoPlayer from "./components/VideoPlayer";
 import NavigationBar from "./components/playground/NavigationBar";
 import SimulationSettingsPanel from "./components/playground/SimulationSettingsPanel";
@@ -14,7 +13,7 @@ import { usePhysics } from "./hooks/usePhysics";
 import { useTargetDirection } from "./hooks/useTargetDirection";
 import { useSceneTransform } from "./hooks/useSceneTransform";
 import { createFileLoadHandler, createSetSaveDirectoryHandler, createSaveDataHandler } from "./utils/fileUtils";
-import { DEFAULT_RANDOM_DISTRACTOR_PARAMS, VID_RES, PX_SCALE, INTERVAL, BORDER_PX, ENTITY_WIDTH, ENTITY_HEIGHT, RES_MULTIPLIER } from "./constants";
+import { DEFAULT_RANDOM_DISTRACTOR_PARAMS, VID_RES, PX_SCALE, INTERVAL, BORDER_PX, RES_MULTIPLIER } from "./constants";
 
 function App() {
   const videoPlayerRef = useRef(null);

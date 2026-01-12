@@ -203,7 +203,7 @@ function DiameterAggregatedPage() {
             }}
           >
             <img
-              src={`/${diameterPath}/${filename}`}
+              src={`${diameterPath}/${filename}`}
               alt={getTitleFromFilename(filename)}
               style={{
                 width: '100%',
@@ -381,7 +381,7 @@ function DiameterAggregatedPage() {
             </div>
 
             <img
-              src={`/${diameterPath}/${selectedImage}`}
+              src={`${diameterPath}/${selectedImage}`}
               alt={getTitleFromFilename(selectedImage)}
               style={{
                 maxWidth: '100%',

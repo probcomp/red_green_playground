@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { rotatePoint, rotateDirection, getEntityCenter, clamp } from '../utils/sceneUtils';
+import { clamp } from '../utils/sceneUtils';
 
 /**
  * Hook for scene transformation operations (move, rotate)

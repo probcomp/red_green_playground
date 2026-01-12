@@ -63,11 +63,20 @@ uv run python red_green_playground.py
 
 The backend will run on `http://localhost:5001`.
 
-### 6. Push to Heroku
+### 6. Asset Storage
+
+**Static assets (images, videos, plots) are stored on AWS S3**, not in the repository. The application loads assets from:
+- `https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/`
+
+The local `assets/site_static_assets/` folder is excluded from Heroku deployments to reduce slug size. Only essential assets (favicon, robots.txt, logos) remain in the local `assets/` folder.
+
+**📖 For detailed information about the asset structure, file naming conventions, and how to add new assets, see [ASSETS_STRUCTURE.md](./ASSETS_STRUCTURE.md).**
+
+### 7. Push to Heroku
 
 When ready, push to Heroku (only for authenticated user --> Arijit)
 
-**Note:** FFmpeg is automatically installed on Heroku via the `heroku-buildpack-ffmpeg-latest` buildpack, which is already configured for this app. This enables MP4 video conversion functionality.
+**Note:** FFmpeg is automatically installed on Heroku via the `heroku-buildpack-activestorage-preview` buildpack, which provides a minimal FFmpeg binary. This enables MP4 video conversion functionality.
 
 ```bash
 git push heroku main
@@ -77,3 +86,5 @@ To verify FFmpeg is available after deployment:
 ```bash
 heroku run ffmpeg -version
 ```
+
+**Note:** The `assets/site_static_assets/` folder is automatically excluded from Heroku deployments via `.slugignore` to keep the slug size under 500MB.

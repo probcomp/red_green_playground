@@ -316,7 +316,7 @@ function DiameterTrialByTrialPage() {
             }}
           >
             <img
-              src={`/${diameterPath}/${trialName}_trajectory.png`}
+              src={`${diameterPath}/${trialName}_trajectory.png`}
               alt={`${trialName} trajectory`}
               style={{
                 width: '100%',
@@ -554,7 +554,7 @@ function DiameterTrialByTrialPage() {
                   </div>
                 ) : (
                   <img
-                    src={`/${diameterPath}/${selectedTrial}_plot.png`}
+                    src={`${diameterPath}/${selectedTrial}_plot.png`}
                     alt={`${selectedTrial} plot`}
                     style={{
                       width: '100%',
@@ -593,7 +593,7 @@ function DiameterTrialByTrialPage() {
                 }}>
                   <video
                     key={selectedTrial}
-                    src={`/${videoPath}/${selectedTrial}_stimulus.mp4`}
+                    src={`${videoPath}/${selectedTrial}_stimulus.mp4`}
                     controls
                     style={{
                       width: '100%',

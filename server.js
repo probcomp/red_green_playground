@@ -5,8 +5,7 @@ const app = express();
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Serve assets/site_static_assets folder (images, videos, etc.) that were moved out of public/
-app.use(express.static(path.join(__dirname, 'assets', 'site_static_assets')));
+// Note: site_static_assets are now served from AWS S3, not locally
 // Serve root assets folder (for favicon, robots.txt, etc.)
 app.use(express.static(path.join(__dirname, 'assets')));
 

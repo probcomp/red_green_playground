@@ -1,6 +1,6 @@
 import React from 'react';
 import { Rnd } from 'react-rnd';
-import { PX_SCALE, BORDER_PX, INTERVAL, ENTITY_COLORS, VID_RES } from '../../constants';
+import { PX_SCALE, BORDER_PX, INTERVAL, ENTITY_COLORS } from '../../constants';
 
 const EntityCanvas = ({
   entities,

@@ -3,6 +3,8 @@
 
 # Assets folder - large image/video directories moved here to avoid duplication
 # These are served directly by the server, not copied to build/
+# Note: site_static_assets are now served from AWS S3, not locally
+assets/site_static_assets/
 
 
 # Python files (not needed for Node.js app)

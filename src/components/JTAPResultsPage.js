@@ -102,8 +102,8 @@ function JTAPResultsPage() {
             }}
           >
             <img
-              src="/with_occlusion.gif"
-              alt="E38 stimulus trajectory"
+              src={`${ASSETS_BASE_PATH}/with_occlusion.gif`}
+              alt="Example stimulus trajectory GIF"
               style={{
                 width: '192px',
                 height: 'auto',
@@ -162,7 +162,7 @@ function JTAPResultsPage() {
             }}
           >
             <img
-              src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/CT14A_trajectory.png`}
+              src={`${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/CT14A_trajectory.png`}
               alt="CT14A trajectory"
               style={{
                 width: '192px',
