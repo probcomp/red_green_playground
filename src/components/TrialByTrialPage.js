@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { ASSETS_BASE_PATH } from '../constants';
 
 // Metrics data
 const metricsData = {
@@ -536,7 +537,7 @@ function TrialByTrialPage() {
                 </div>
               )}
               <img
-                src={`/cogsci2025_tuned/${trialName}_trajectory.png`}
+                src={`/${ASSETS_BASE_PATH}/cogsci2025_tuned/${trialName}_trajectory.png`}
                 alt={`${trialName} trajectory`}
                 style={{
                   width: '100%',
@@ -817,7 +818,7 @@ function TrialByTrialPage() {
                   </div>
                 ) : (
                   <img
-                    src={`/cogsci2025_tuned/${selectedTrial}_plot.png`}
+                    src={`/${ASSETS_BASE_PATH}/cogsci2025_tuned/${selectedTrial}_plot.png`}
                     alt={`${selectedTrial} plot`}
                     style={{
                       width: '100%',
@@ -857,7 +858,7 @@ function TrialByTrialPage() {
                 }}>
                   <video
                     key={selectedTrial} // Force re-render when trial changes
-                    src={`/cogsci2025_tuned/${selectedTrial}_stimulus.mp4`}
+                    src={`/${ASSETS_BASE_PATH}/cogsci2025_tuned/${selectedTrial}_stimulus.mp4`}
                     controls
                     style={{
                       width: '100%',

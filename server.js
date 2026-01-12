@@ -5,7 +5,9 @@ const app = express();
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Serve assets folder (images, videos, etc.) that were moved out of public/
+// Serve assets/site_static_assets folder (images, videos, etc.) that were moved out of public/
+app.use(express.static(path.join(__dirname, 'assets', 'site_static_assets')));
+// Serve root assets folder (for favicon, robots.txt, etc.)
 app.use(express.static(path.join(__dirname, 'assets')));
 
 // Handle React routing, return all requests to React app

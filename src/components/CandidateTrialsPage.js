@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { ASSETS_BASE_PATH } from '../constants';
 
 // Category definitions
 const categories = [
@@ -639,7 +640,7 @@ function CandidateTrialsPage() {
                       }}
                     >
                       <img
-                        src={`/CandidateTrialsNov29_Plots/${variant}_trajectory.png`}
+                        src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/${variant}_trajectory.png`}
                         alt={`${variant} trajectory`}
                         style={{
                           width: '100%',
@@ -705,7 +706,7 @@ function CandidateTrialsPage() {
               >
                 {isGenerated ? (
                   <img
-                    src={`/CandidateTrialsNov29_Plots/${trialName}_trajectory.png`}
+                    src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/${trialName}_trajectory.png`}
                     alt={`${trialName} trajectory`}
                     style={{
                       width: '100%',
@@ -970,7 +971,7 @@ function CandidateTrialsPage() {
                             </div>
                             <video
                               key={variant}
-                              src={`/CandidateTrialsNov29_Plots/${variant}_stimulus.webm`}
+                              src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/${variant}_stimulus.webm`}
                               controls
                               onDoubleClick={(e) => {
                                 e.stopPropagation();
@@ -1077,7 +1078,7 @@ function CandidateTrialsPage() {
                             </div>
                           ) : (
                             <img
-                              src={`/CandidateTrialsNov29_Plots/${variant}_plot.png`}
+                              src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/${variant}_plot.png`}
                               alt={`${variant} plot`}
                               onDoubleClick={(e) => {
                                 e.stopPropagation();
@@ -1176,7 +1177,7 @@ function CandidateTrialsPage() {
                     </div>
                   ) : (
                     <img
-                      src={`/CandidateTrialsNov29_Plots/${selectedTrial}_plot.png`}
+                      src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/${selectedTrial}_plot.png`}
                       alt={`${selectedTrial} plot`}
                       style={{
                         width: '100%',
@@ -1207,7 +1208,7 @@ function CandidateTrialsPage() {
                   }}>
                     <video
                       key={selectedTrial}
-                      src={`/CandidateTrialsNov29_Plots/${selectedTrial}_stimulus.webm`}
+                      src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/${selectedTrial}_stimulus.webm`}
                       controls
                       style={{
                         width: '100%',

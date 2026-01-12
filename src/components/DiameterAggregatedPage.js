@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ASSETS_BASE_PATH } from '../constants';
 
 const aggregatedFiles = [
   'model_only_logfreq_all_trials.png',
@@ -56,7 +57,7 @@ function DiameterAggregatedPage() {
   const { diameter } = useParams();
   const [selectedImage, setSelectedImage] = useState(null);
   
-  const diameterPath = `diameter_${diameter}/cogsci_2025_trials`;
+  const diameterPath = `${ASSETS_BASE_PATH}/diameter_${diameter}/cogsci_2025_trials`;
 
   useEffect(() => {
     const handleKeyDown = (e) => {

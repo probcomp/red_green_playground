@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { ASSETS_BASE_PATH } from '../constants';
 
 // Diameter configurations
 const diameters = ['0_5', '0_8', '0_9', '0_925', '0_95', '0_99'];
@@ -161,7 +162,7 @@ function JTAPResultsPage() {
             }}
           >
             <img
-              src="/CandidateTrialsNov29_Plots/CT14A_trajectory.png"
+              src={`/${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/CT14A_trajectory.png`}
               alt="CT14A trajectory"
               style={{
                 width: '192px',

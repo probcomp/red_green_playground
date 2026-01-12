@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ASSETS_BASE_PATH } from '../constants';
 
 function DiameterTrialByTrialPage() {
   const { diameter } = useParams();
@@ -10,9 +11,9 @@ function DiameterTrialByTrialPage() {
   const trials = Array.from({ length: 50 }, (_, i) => `E${i + 1}`);
   
   // Base path for diameter-specific plots
-  const diameterPath = `diameter_${diameter}/cogsci_2025_trials`;
+  const diameterPath = `${ASSETS_BASE_PATH}/diameter_${diameter}/cogsci_2025_trials`;
   // Videos come from cogsci2025_tuned
-  const videoPath = 'cogsci2025_tuned';
+  const videoPath = `${ASSETS_BASE_PATH}/cogsci2025_tuned`;
 
   const navigateTrial = (direction) => {
     if (selectedTrial === null) return;

@@ -56,3 +56,4 @@ export const MODES = {
 // Default trial name
 export const DEFAULT_TRIAL_NAME = 'base';
 
+export const ASSETS_BASE_PATH = 'site_static_assets';

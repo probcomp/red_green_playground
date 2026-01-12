@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { ASSETS_BASE_PATH } from '../constants';
 
 // List of aggregated result files (excluding trial-specific files)
 const aggregatedFiles = [
@@ -202,7 +203,7 @@ function AggregatedResultsPage() {
             }}
           >
             <img
-              src={`/cogsci2025_tuned/${filename}`}
+              src={`/${ASSETS_BASE_PATH}/cogsci2025_tuned/${filename}`}
               alt={getTitleFromFilename(filename)}
               style={{
                 width: '100%',
@@ -387,7 +388,7 @@ function AggregatedResultsPage() {
 
             {/* Image */}
             <img
-              src={`/cogsci2025_tuned/${selectedImage}`}
+              src={`/${ASSETS_BASE_PATH}/cogsci2025_tuned/${selectedImage}`}
               alt={getTitleFromFilename(selectedImage)}
               style={{
                 maxWidth: '100%',

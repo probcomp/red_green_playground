@@ -26,6 +26,7 @@ GLOBAL_SIM_DATA = None
 # Define the path to the React build folder relative to this file
 build_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
 assets_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+assets_static_path = os.path.join(assets_path, "site_static_assets")
 
 # Flask app initialization
 app = Flask(__name__, static_folder=os.path.join(build_path, "static"))
@@ -628,7 +629,12 @@ def serve_static_files(path):
     if os.path.exists(build_file_path):
         return send_from_directory(build_path, path)
     
-    # Then check assets folder
+    # Then check assets/site_static_assets folder
+    assets_static_file_path = os.path.join(assets_static_path, path)
+    if os.path.exists(assets_static_file_path):
+        return send_from_directory(assets_static_path, path)
+    
+    # Then check root assets folder (for favicon, robots.txt, etc.)
     assets_file_path = os.path.join(assets_path, path)
     if os.path.exists(assets_file_path):
         return send_from_directory(assets_path, path)
