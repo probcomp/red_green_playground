@@ -89,3 +89,221 @@ export const parseFileData = (parsedData) => {
   };
 };
 
+
+/**
+ * Create file load handler
+ * @param {Object} params - Parameters object
+ * @returns {Function} File load handler function
+ */
+export const createFileLoadHandler = ({
+  setSimData,
+  setEntities,
+  setVideoLength,
+  setBallSpeed,
+  setFps,
+  setWorldWidth,
+  setWorldHeight,
+  setKeyDistractors,
+  setRandomDistractorParams,
+  setMode,
+  setTargetDirection,
+  setDirectionInput,
+  setShouldAutoSimulate,
+  mode,
+  DEFAULT_RANDOM_DISTRACTOR_PARAMS
+}) => {
+  return async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      try {
+        const clearResponse = await fetch("/clear_simulation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!clearResponse.ok) {
+          alert(`Failed to clear simulation: ${await clearResponse.text()}`);
+          return;
+        }
+        setSimData(null);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const parsedData = JSON.parse(e.target.result);
+            const { entities: parsedEntities, hasDistractorData, distractorData, simulationParams } = parseFileData(parsedData);
+            if (simulationParams) {
+              if (simulationParams.videoLength !== undefined) setVideoLength(simulationParams.videoLength);
+              if (simulationParams.ballSpeed !== undefined) setBallSpeed(simulationParams.ballSpeed);
+              if (simulationParams.fps !== undefined) setFps(simulationParams.fps);
+              if (simulationParams.worldWidth !== undefined) setWorldWidth(simulationParams.worldWidth);
+              if (simulationParams.worldHeight !== undefined) setWorldHeight(simulationParams.worldHeight);
+            }
+            if (distractorData) {
+              if (distractorData.keyDistractors || distractorData.keyHallucinations) {
+                setKeyDistractors(distractorData.keyDistractors || distractorData.keyHallucinations);
+              }
+              if (distractorData.randomDistractorParams || distractorData.randomHallucinationParams) {
+                setRandomDistractorParams(distractorData.randomDistractorParams || distractorData.randomHallucinationParams);
+              }
+            }
+            setEntities(parsedEntities);
+            const targetEntity = parsedEntities.find((entity) => entity.type === "target");
+            if (targetEntity) {
+              setTargetDirection(targetEntity.direction || 0);
+              setDirectionInput(((targetEntity.direction || 0) * (180 / Math.PI)).toString());
+            }
+            if (hasDistractorData && mode === "regular") {
+              setMode("distractor");
+            } else if (!hasDistractorData && mode === "distractor") {
+              setMode("regular");
+              setKeyDistractors([]);
+              setRandomDistractorParams(DEFAULT_RANDOM_DISTRACTOR_PARAMS);
+            }
+            setShouldAutoSimulate(true);
+          } catch (err) {
+            alert("Failed to parse file. Ensure it's a valid JSON format.");
+          }
+        };
+        reader.readAsText(file);
+      } catch (err) {
+        console.error("Error clearing simulation:", err);
+        alert("An unexpected error occurred while clearing the simulation.");
+      }
+    }
+  };
+};
+
+/**
+ * Create save directory handler
+ * @param {Function} setSaveDirectoryHandle - Setter for save directory handle
+ * @returns {Function} Save directory handler function
+ */
+export const createSetSaveDirectoryHandler = (setSaveDirectoryHandle) => {
+  return async () => {
+    if (!('showDirectoryPicker' in window)) {
+      alert("Your browser doesn't support directory selection. When you save, files will be downloaded to your default downloads folder instead.");
+      return;
+    }
+    try {
+      const directoryHandle = await window.showDirectoryPicker();
+      setSaveDirectoryHandle(directoryHandle);
+      alert(`Save directory set to: ${directoryHandle.name}`);
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        alert("Directory selection was cancelled.");
+      } else {
+        console.error("Error selecting directory:", error);
+        alert("An error occurred while selecting the directory.");
+      }
+    }
+  };
+};
+
+/**
+ * Create save data handler
+ * @param {Object} params - Parameters object
+ * @returns {Function} Save data handler function
+ */
+export const createSaveDataHandler = ({
+  simData,
+  entities,
+  mode,
+  keyDistractors,
+  randomDistractorParams,
+  videoLength,
+  ballSpeed,
+  fps,
+  worldWidth,
+  worldHeight,
+  trial_name,
+  saveDirectoryHandle,
+  autoDownloadWebM,
+  videoPlayerRef
+}) => {
+  return async () => {
+    if (!simData) {
+      alert("No simulation data available. Please run a simulation first!");
+      return;
+    }
+    if (!saveDirectoryHandle) {
+      try {
+        const initStateData = prepareInitStateData(entities, mode, keyDistractors, randomDistractorParams, null);
+        downloadJSON(initStateData, `${trial_name}_init_state_entities.json`);
+        downloadJSON(simData, `${trial_name}_simulation_data.json`);
+        if (autoDownloadWebM && videoPlayerRef && videoPlayerRef.current) {
+          try {
+            await videoPlayerRef.current.downloadWebM();
+            alert("Files downloaded successfully!");
+          } catch (error) {
+            console.error("Error downloading video:", error);
+            alert("Data files downloaded successfully, but video download failed!");
+          }
+        } else {
+          alert("Files downloaded successfully!");
+        }
+      } catch (error) {
+        console.error("Error downloading files:", error);
+        alert("An error occurred while downloading files: " + error.message);
+      }
+      return;
+    }
+    try {
+      let trialDirExists = false;
+      let existingTrialDirHandle = null;
+      try {
+        existingTrialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name);
+        trialDirExists = true;
+      } catch (error) {
+        trialDirExists = false;
+      }
+      if (trialDirExists) {
+        const userConfirmed = window.confirm(`The trial directory "${trial_name}" already exists in the save directory. Do you want to override it?`);
+        if (!userConfirmed) return;
+        if (existingTrialDirHandle) {
+          const filesToRemove = [`${trial_name}.webm`, `${trial_name}_stimulus.webm`, `${trial_name}_revealed.webm`];
+          for (const filename of filesToRemove) {
+            try {
+              await existingTrialDirHandle.removeEntry(filename, { recursive: false });
+              console.log(`Removed existing WebM file: ${filename}`);
+            } catch (error) {
+              console.log(`No existing WebM file to remove (${filename}):`, error);
+            }
+          }
+        }
+      }
+      const trialDirHandle = await saveDirectoryHandle.getDirectoryHandle(trial_name, { create: true });
+      const simulationParams = { videoLength, ballSpeed, fps, worldWidth, worldHeight };
+      const initStateData = prepareInitStateData(entities, mode, keyDistractors, randomDistractorParams, simulationParams);
+      const entitiesFileHandle = await trialDirHandle.getFileHandle('init_state_entities.json', { create: true });
+      const entitiesWritable = await entitiesFileHandle.createWritable();
+      await entitiesWritable.write(JSON.stringify(initStateData, null, 2));
+      await entitiesWritable.close();
+      const simDataFileHandle = await trialDirHandle.getFileHandle('simulation_data.json', { create: true });
+      const simDataWritable = await simDataFileHandle.createWritable();
+      await simDataWritable.write(JSON.stringify(simData, null, 2));
+      await simDataWritable.close();
+      if (autoDownloadWebM && simData && videoPlayerRef && videoPlayerRef.current) {
+        try {
+          await videoPlayerRef.current.downloadWebM();
+          alert("Data and video saved successfully!");
+        } catch (error) {
+          console.error("Error downloading video:", error);
+          alert("Data saved successfully, but video download failed!");
+        }
+      } else {
+        alert("Data saved successfully!");
+      }
+    } catch (error) {
+      console.error("Error saving data:", error);
+      if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+        alert("Permission denied. Falling back to download files.");
+        const simulationParams = { videoLength, ballSpeed, fps, worldWidth, worldHeight };
+        const initStateData = prepareInitStateData(entities, mode, keyDistractors, randomDistractorParams, simulationParams);
+        downloadJSON(initStateData, `${trial_name}_init_state_entities.json`);
+        downloadJSON(simData, `${trial_name}_simulation_data.json`);
+        alert("Files downloaded successfully!");
+      } else {
+        alert("An error occurred while saving data: " + error.message);
+      }
+    }
+  };
+};

@@ -29,7 +29,7 @@ export const useEntities = (worldWidth, worldHeight) => {
       y: worldHeight / 2 - ENTITY_HEIGHT / 2,
       width: ENTITY_WIDTH,
       height: ENTITY_HEIGHT,
-      direction: 0,
+      direction: 0, // Initial direction in radians
     };
     setEntities((prev) => [...prev, newEntity]);
     
