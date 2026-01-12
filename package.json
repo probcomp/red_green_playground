@@ -21,7 +21,11 @@
     "build": "REACT_APP_BUILD_DATE=\"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\" react-scripts build",
     "build:windows": "set REACT_APP_BUILD_DATE=%date% && react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix",
+    "predeploy": "npm audit --audit-level=moderate && npm run build",
+    "deploy:check": "npm audit --audit-level=moderate && npm run build"
   },
   "eslintConfig": {
     "extends": [
@@ -42,6 +46,7 @@
     ]
   },
   "engines": {
-    "node": "24.x"
+    "node": "24.x",
+    "npm": "11.6.2"
   }
 }
