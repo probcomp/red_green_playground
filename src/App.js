@@ -35,7 +35,7 @@ function App() {
   const [trial_name, setTrial_name] = useState('base');
   const [saveDirectoryHandle, setSaveDirectoryHandle] = useState(null);
   const [autoDownloadWebM, setAutoDownloadWebM] = useState(true);
-  const [videoFormat, setVideoFormat] = useState('mp4'); // 'webm' or 'mp4'
+  const [videoFormat, setVideoFormat] = useState('webm'); // 'webm' or 'mp4'
 
   // Scene transformation controls
   const [movementUnit, setMovementUnit] = useState(1.0);

@@ -16,7 +16,7 @@ const VideoPlayer = forwardRef(({
   keyDistractors = [],
   editingDistractorIndex = null,
   onAddKeyDistractor = () => {},
-  videoFormat = "mp4" // "webm" or "mp4"
+  videoFormat = "webm" // "webm" or "mp4"
 }, ref) => {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);

@@ -302,28 +302,58 @@ const ControlBar = ({
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "600", marginRight: "4px" }}>
-                Format:
-              </label>
-              <select
-                value={videoFormat}
-                onChange={(e) => onVideoFormatChange(e.target.value)}
-                style={{
-                  padding: "4px 8px",
-                  border: "2px solid #475569",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  outline: "none",
-                  backgroundColor: "#1e293b",
-                  color: "#f1f5f9",
-                  fontWeight: "500",
-                  cursor: "pointer"
-                }}
-              >
-                <option value="webm">WebM</option>
-                <option value="mp4">MP4</option>
-              </select>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <label style={{ fontSize: "12px", color: "#e2e8f0", margin: 0, fontWeight: "600", marginRight: "4px" }}>
+                  Format:
+                </label>
+                <select
+                  value={videoFormat}
+                  onChange={(e) => {
+                    const newFormat = e.target.value;
+                    if (newFormat === 'mp4') {
+                      const confirmed = window.confirm(
+                        'MP4 format requires server-side conversion from WebM, which will take longer (typically 15-20 seconds). Continue?'
+                      );
+                      if (confirmed) {
+                        onVideoFormatChange(newFormat);
+                      } else {
+                        // Reset to WebM if user cancels
+                        e.target.value = 'webm';
+                      }
+                    } else {
+                      onVideoFormatChange(newFormat);
+                    }
+                  }}
+                  style={{
+                    padding: "4px 8px",
+                    border: "2px solid #475569",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    outline: "none",
+                    backgroundColor: "#1e293b",
+                    color: "#f1f5f9",
+                    fontWeight: "500",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="webm">WebM</option>
+                  <option value="mp4">MP4</option>
+                </select>
+              </div>
+              {videoFormat === 'mp4' && (
+                <div style={{
+                  fontSize: "10px",
+                  color: "#fbbf24",
+                  fontStyle: "italic",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  marginLeft: "60px"
+                }}>
+                  ⚠️ MP4 conversion takes ~15-20 seconds
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input
