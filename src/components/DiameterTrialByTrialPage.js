@@ -1,14 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ASSETS_BASE_PATH } from '../constants';
+import { getNextDiameter, getPrevDiameter, formatDiameter as formatDiameterUtil } from '../utils/diameterUtils';
+import DiameterNavigationCard from './DiameterNavigationCard';
 
 function DiameterTrialByTrialPage() {
   const { diameter } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTrial, setSelectedTrial] = useState(null);
   const [hidePlotInitially, setHidePlotInitially] = useState(false);
   const [plotRevealed, setPlotRevealed] = useState(false);
   const [hideVideo, setHideVideo] = useState(false);
   const trials = Array.from({ length: 50 }, (_, i) => `E${i + 1}`);
+  
+  // Restore selected trial from URL on mount and when diameter changes
+  useEffect(() => {
+    const trialParam = searchParams.get('trial');
+    if (trialParam && trials.includes(trialParam)) {
+      setSelectedTrial(trialParam);
+    } else {
+      setSelectedTrial(null);
+    }
+  }, [diameter, searchParams]);
+  
+  // Update URL when trial changes
+  useEffect(() => {
+    if (selectedTrial) {
+      setSearchParams({ trial: selectedTrial });
+    } else {
+      setSearchParams({});
+    }
+  }, [selectedTrial, setSearchParams]);
   
   // Base path for diameter-specific plots
   const diameterPath = `${ASSETS_BASE_PATH}/diameter_${diameter}/cogsci_2025_trials`;
@@ -29,13 +52,27 @@ function DiameterTrialByTrialPage() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Diameter navigation with Shift+Arrow keys (works everywhere)
+      if (e.shiftKey) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          navigateDiameter(-1);
+          return;
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          navigateDiameter(1);
+          return;
+        }
+      }
+
+      // Trial navigation (only when modal is open)
       if (selectedTrial === null) return;
 
       if (e.key === 'Escape') {
         setSelectedTrial(null);
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' && !e.shiftKey) {
         navigateTrial(-1);
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' && !e.shiftKey) {
         navigateTrial(1);
       }
     };
@@ -43,7 +80,7 @@ function DiameterTrialByTrialPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTrial]);
+  }, [selectedTrial, diameter]);
 
   const openModal = (trialName) => {
     setSelectedTrial(trialName);
@@ -63,8 +100,22 @@ function DiameterTrialByTrialPage() {
 
   // Format diameter for display (e.g., "0_95" -> "95%")
   const formatDiameter = (d) => {
-    const num = d.replace('_', '.');
-    return `${(parseFloat(num) * 100).toFixed(2)}%`;
+    return formatDiameterUtil(d);
+  };
+
+  // Navigate to a different diameter while preserving selected trial
+  const navigateToDiameter = (newDiameter) => {
+    if (!newDiameter || newDiameter === diameter) return;
+    
+    const trialParam = selectedTrial ? `?trial=${selectedTrial}` : '';
+    navigate(`/jtap/diameter/${newDiameter}/trial-by-trial${trialParam}`);
+  };
+
+  const navigateDiameter = (direction) => {
+    const newDiameter = direction > 0 ? getNextDiameter(diameter) : getPrevDiameter(diameter);
+    if (newDiameter) {
+      navigateToDiameter(newDiameter);
+    }
   };
 
   return (
@@ -109,8 +160,88 @@ function DiameterTrialByTrialPage() {
       {/* Header */}
       <div style={{
         maxWidth: '1400px',
-        margin: '0 auto 40px auto'
+        margin: '0 auto 40px auto',
+        position: 'relative'
       }}>
+        {/* Diameter Navigation Arrows */}
+        <div style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          {getPrevDiameter(diameter) && (
+            <button
+              onClick={() => navigateDiameter(-1)}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                border: '2px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                fontSize: '20px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f8fafc';
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#ffffff';
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.transform = 'scale(1)';
+              }}
+              title="Previous diameter (Shift+←)"
+            >
+              ←
+            </button>
+          )}
+          {getNextDiameter(diameter) && (
+            <button
+              onClick={() => navigateDiameter(1)}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                border: '2px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                fontSize: '20px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f8fafc';
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#ffffff';
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.transform = 'scale(1)';
+              }}
+              title="Next diameter (Shift+→)"
+            >
+              →
+            </button>
+          )}
+        </div>
+
         <h1 style={{
           fontSize: '48px',
           fontWeight: '700',
@@ -634,6 +765,9 @@ function DiameterTrialByTrialPage() {
           </div>
         </div>
       )}
+
+      {/* Persistent Diameter Navigation Card */}
+      <DiameterNavigationCard currentDiameter={diameter} selectedTrial={selectedTrial} />
     </div>
   );
 }

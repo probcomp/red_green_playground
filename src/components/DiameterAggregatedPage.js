@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ASSETS_BASE_PATH } from '../constants';
+import { getNextDiameter, getPrevDiameter, formatDiameter as formatDiameterUtil } from '../utils/diameterUtils';
+import DiameterNavigationCard from './DiameterNavigationCard';
 
 const aggregatedFiles = [
   'model_only_logfreq_all_trials.png',
@@ -55,19 +57,54 @@ const getCaption = (filename) => {
 
 function DiameterAggregatedPage() {
   const { diameter } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedImage, setSelectedImage] = useState(null);
   
   const diameterPath = `${ASSETS_BASE_PATH}/diameter_${diameter}/cogsci_2025_trials`;
+  
+  // Restore selected image from URL on mount and when diameter changes
+  useEffect(() => {
+    const imageParam = searchParams.get('image');
+    if (imageParam && aggregatedFiles.includes(imageParam)) {
+      setSelectedImage(imageParam);
+    } else {
+      setSelectedImage(null);
+    }
+  }, [diameter, searchParams]);
+  
+  // Update URL when image changes
+  useEffect(() => {
+    if (selectedImage) {
+      setSearchParams({ image: selectedImage });
+    } else {
+      setSearchParams({});
+    }
+  }, [selectedImage, setSearchParams]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Diameter navigation with Shift+Arrow keys (works everywhere)
+      if (e.shiftKey) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          navigateDiameter(-1);
+          return;
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          navigateDiameter(1);
+          return;
+        }
+      }
+
+      // Image navigation (only when modal is open)
       if (selectedImage === null) return;
 
       if (e.key === 'Escape') {
         setSelectedImage(null);
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' && !e.shiftKey) {
         navigateImage(-1);
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' && !e.shiftKey) {
         navigateImage(1);
       }
     };
@@ -75,7 +112,7 @@ function DiameterAggregatedPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedImage]);
+  }, [selectedImage, diameter]);
 
   const navigateImage = (direction) => {
     if (selectedImage === null) return;
@@ -103,8 +140,22 @@ function DiameterAggregatedPage() {
   };
 
   const formatDiameter = (d) => {
-    const num = d.replace('_', '.');
-    return `${(parseFloat(num) * 100).toFixed(2)}%`;
+    return formatDiameterUtil(d);
+  };
+
+  // Navigate to a different diameter while preserving selected image
+  const navigateToDiameter = (newDiameter) => {
+    if (!newDiameter || newDiameter === diameter) return;
+    
+    const imageParam = selectedImage ? `?image=${encodeURIComponent(selectedImage)}` : '';
+    navigate(`/jtap/diameter/${newDiameter}/aggregated${imageParam}`);
+  };
+
+  const navigateDiameter = (direction) => {
+    const newDiameter = direction > 0 ? getNextDiameter(diameter) : getPrevDiameter(diameter);
+    if (newDiameter) {
+      navigateToDiameter(newDiameter);
+    }
   };
 
   return (
@@ -147,8 +198,88 @@ function DiameterAggregatedPage() {
 
       <div style={{
         maxWidth: '1400px',
-        margin: '0 auto 40px auto'
+        margin: '0 auto 40px auto',
+        position: 'relative'
       }}>
+        {/* Diameter Navigation Arrows */}
+        <div style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          {getPrevDiameter(diameter) && (
+            <button
+              onClick={() => navigateDiameter(-1)}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                border: '2px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                fontSize: '20px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f8fafc';
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#ffffff';
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.transform = 'scale(1)';
+              }}
+              title="Previous diameter (Shift+←)"
+            >
+              ←
+            </button>
+          )}
+          {getNextDiameter(diameter) && (
+            <button
+              onClick={() => navigateDiameter(1)}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                border: '2px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                fontSize: '20px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f8fafc';
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#ffffff';
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.transform = 'scale(1)';
+              }}
+              title="Next diameter (Shift+→)"
+            >
+              →
+            </button>
+          )}
+        </div>
+
         <h1 style={{
           fontSize: '48px',
           fontWeight: '700',
@@ -279,6 +410,102 @@ function DiameterAggregatedPage() {
           >
             ×
           </button>
+
+          {/* Diameter Navigation Arrows in Modal */}
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            zIndex: 1001
+          }}>
+            {getPrevDiameter(diameter) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateDiameter(-1);
+                }}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: '2px solid rgba(255, 255, 255, 0.5)',
+                  borderRadius: '8px',
+                  width: '44px',
+                  height: '44px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#1e293b',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#ffffff';
+                  e.target.style.borderColor = '#ffffff';
+                  e.target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  e.target.style.transform = 'scale(1)';
+                }}
+                title="Previous diameter (Shift+←)"
+              >
+                ◄
+              </button>
+            )}
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: '600',
+              padding: '8px 16px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              backdropFilter: 'blur(10px)'
+            }}>
+              {formatDiameter(diameter)}
+            </div>
+            {getNextDiameter(diameter) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateDiameter(1);
+                }}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: '2px solid rgba(255, 255, 255, 0.5)',
+                  borderRadius: '8px',
+                  width: '44px',
+                  height: '44px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#1e293b',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#ffffff';
+                  e.target.style.borderColor = '#ffffff';
+                  e.target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  e.target.style.transform = 'scale(1)';
+                }}
+                title="Next diameter (Shift+→)"
+              >
+                ►
+              </button>
+            )}
+          </div>
 
           {aggregatedFiles.indexOf(selectedImage) > 0 && (
             <button
@@ -427,6 +654,9 @@ function DiameterAggregatedPage() {
           </div>
         </div>
       )}
+
+      {/* Persistent Diameter Navigation Card */}
+      <DiameterNavigationCard currentDiameter={diameter} selectedImage={selectedImage} />
     </div>
   );
 }
