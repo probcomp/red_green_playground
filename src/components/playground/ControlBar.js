@@ -313,7 +313,7 @@ const ControlBar = ({
                     const newFormat = e.target.value;
                     if (newFormat === 'mp4') {
                       const confirmed = window.confirm(
-                        'MP4 format requires server-side conversion from WebM, which will take longer (typically 15-20 seconds). Continue?'
+                        'MP4 format requires server-side conversion from WebM, which will take longer. Continue?'
                       );
                       if (confirmed) {
                         onVideoFormatChange(newFormat);
