@@ -5,6 +5,7 @@ const ControlBar = ({
   onAddEntity,
   onSimulate,
   isValidPhysics,
+  overlapWarning,
   trial_name,
   onTrialNameChange,
   saveDirectoryHandle,
@@ -201,8 +202,9 @@ const ControlBar = ({
                 e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
               }
             }}
+            title={overlapWarning || undefined}
           >
-            {isValidPhysics ? "🚀 Simulate" : "Invalid Physics"}
+            {isValidPhysics ? "🚀 Simulate" : (overlapWarning ? "⚠️ Overlaps Detected" : "Invalid Physics")}
           </button>
         </div>
 

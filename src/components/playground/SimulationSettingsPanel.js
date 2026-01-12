@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const SimulationSettingsPanel = ({
   videoLength,
@@ -14,8 +14,11 @@ const SimulationSettingsPanel = ({
   onWorldHeightChange,
   onDirectionInputChange,
   physicsWarning,
-  ballMovementPerFrame
+  ballMovementPerFrame,
+  strictOcclusionMode,
+  onStrictOcclusionModeChange
 }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
   return (
     <div style={{ 
       background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)", 
@@ -303,6 +306,84 @@ const SimulationSettingsPanel = ({
               }}
             />
           </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          marginBottom: '8px'
+        }}>
+          <label style={{ 
+            fontSize: '14px', 
+            fontWeight: '600', 
+            color: '#374151', 
+            letterSpacing: '0.025em',
+            margin: 0,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <input
+              type="checkbox"
+              checked={strictOcclusionMode}
+              onChange={(e) => onStrictOcclusionModeChange(e.target.checked)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#3b82f6'
+              }}
+            />
+            <span>Strict Occlusion Mode</span>
+            <span
+              style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                cursor: 'help',
+                position: 'relative'
+              }}
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+            >
+              ℹ️
+              {showTooltip && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginBottom: '8px',
+                  padding: '12px',
+                  backgroundColor: '#1e293b',
+                  color: '#f1f5f9',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  width: '250px',
+                  zIndex: 1000,
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  pointerEvents: 'none',
+                  lineHeight: '1.5'
+                }}>
+                  When enabled, occluders cannot overlap with barriers or sensors. Touching edges is allowed, but any overlap is prohibited. Barriers overlapping barriers is always prohibited regardless of this setting.
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-4px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '4px solid transparent',
+                    borderRight: '4px solid transparent',
+                    borderTop: '4px solid #1e293b'
+                  }} />
+                </div>
+              )}
+            </span>
+          </label>
         </div>
       </div>
       

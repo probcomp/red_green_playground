@@ -13,6 +13,7 @@ import { usePhysics } from "./hooks/usePhysics";
 import { useTargetDirection } from "./hooks/useTargetDirection";
 import { useSceneTransform } from "./hooks/useSceneTransform";
 import { createFileLoadHandler, createSetSaveDirectoryHandler, createSaveDataHandler } from "./utils/fileUtils";
+import { validateEntityOverlaps } from "./utils/collisionUtils";
 import { DEFAULT_RANDOM_DISTRACTOR_PARAMS, VID_RES, PX_SCALE, INTERVAL, BORDER_PX, RES_MULTIPLIER } from "./constants";
 
 function App() {
@@ -38,6 +39,12 @@ function App() {
 
   // Scene transformation controls
   const [movementUnit, setMovementUnit] = useState(1.0);
+
+  // Strict occlusion mode (default: true)
+  const [strictOcclusionMode, setStrictOcclusionMode] = useState(true);
+
+  // Overlap validation
+  const [overlapValidation, setOverlapValidation] = useState({ valid: true, overlapRegions: [] });
 
   // Use hooks for state management
   const entitiesHook = useEntities(worldWidth, worldHeight);
@@ -72,6 +79,12 @@ function App() {
     };
   }, [moveScene]);
 
+  // Validate overlaps whenever entities or strict mode changes
+  useEffect(() => {
+    const validation = validateEntityOverlaps(entities, strictOcclusionMode);
+    setOverlapValidation(validation);
+  }, [entities, strictOcclusionMode]);
+
   // Auto-simulate when keyDistractors change
   useEffect(() => {
     if (shouldAutoSimulate && entities.length > 0) {
@@ -100,6 +113,14 @@ function App() {
 
   // Wrapper for handleSimulate
   const handleSimulate = (autoRun = false) => {
+    // Check for overlaps before simulating
+    if (!overlapValidation.valid) {
+      if (!autoRun) {
+        alert(overlapValidation.message);
+      }
+      return;
+    }
+
     const simulationParams = {
       videoLength,
       ballSpeed,
@@ -167,6 +188,8 @@ function App() {
       x: Math.max(0, Math.min(snappedX, worldWidth - entity.width)),
       y: Math.max(0, Math.min(snappedY, worldHeight - entity.height)),
     };
+    
+    // Update entity - validation will happen automatically via useEffect
     updateEntity(entity.id, updatedEntity);
 
     // Update target direction if it's a target
@@ -199,6 +222,8 @@ function App() {
       width: snappedWidth,
       height: snappedHeight,
     };
+    
+    // Update entity - validation will happen automatically via useEffect
     updateEntity(entity.id, updatedEntity);
   };
 
@@ -286,6 +311,8 @@ function App() {
             onDirectionInputChange={handleDirectionInputChange}
             physicsWarning={physicsWarning}
             ballMovementPerFrame={ballMovementPerFrame}
+            strictOcclusionMode={strictOcclusionMode}
+            onStrictOcclusionModeChange={setStrictOcclusionMode}
           />
 
           <SceneControlsPanel
@@ -333,6 +360,7 @@ function App() {
             onDeleteEntity={handleDeleteEntity}
             onUpdateTargetDirection={handleUpdateTargetDirection}
             updateEntity={updateEntity}
+            overlapRegions={overlapValidation.overlapRegions}
           />
 
           {/* Video Player Section */}
@@ -392,7 +420,8 @@ function App() {
       <ControlBar
         onAddEntity={addEntity}
         onSimulate={handleSimulate}
-        isValidPhysics={isValidPhysics}
+        isValidPhysics={isValidPhysics && overlapValidation.valid}
+        overlapWarning={!overlapValidation.valid ? overlapValidation.message : null}
         trial_name={trial_name}
         onTrialNameChange={setTrial_name}
         saveDirectoryHandle={saveDirectoryHandle}

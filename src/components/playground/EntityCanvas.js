@@ -15,7 +15,8 @@ const EntityCanvas = ({
   onCanvasClick,
   onDeleteEntity,
   onUpdateTargetDirection,
-  updateEntity
+  updateEntity,
+  overlapRegions = []
 }) => {
   const px_scale = PX_SCALE;
   const border_px = BORDER_PX;
@@ -144,6 +145,43 @@ const EntityCanvas = ({
           {entity.type === "target" && renderDirectionPreview(entity)}
         </React.Fragment>
       ))}
+      {/* Overlap Highlight Regions */}
+      {overlapRegions.map((overlap, index) => {
+        // Convert world coordinates to canvas coordinates
+        // Match exactly how Rnd positions entities:
+        // Rnd position: x: entity.x * px_scale + border_px
+        //               y: (worldHeight - entity.y - entity.height) * px_scale + border_px
+        // Note: overlap.y is the bottom coordinate in world space (same as entity.y)
+        // Adjust for grid snapping offset: subtract one grid interval (INTERVAL * px_scale) from both X and Y
+        // This accounts for the step size between spatial domains for rectangular entities
+        const gridOffset = interval * px_scale;
+        const canvasX = overlap.x * px_scale + border_px - gridOffset;
+        const canvasY = (worldHeight - overlap.y - overlap.height) * px_scale + border_px - gridOffset;
+        const canvasWidth = overlap.width * px_scale;
+        const canvasHeight = overlap.height * px_scale;
+        
+        return (
+          <div
+            key={`overlap-${index}`}
+            style={{
+              position: "absolute",
+              left: `${canvasX}px`,
+              top: `${canvasY}px`,
+              width: `${canvasWidth}px`,
+              height: `${canvasHeight}px`,
+              backgroundColor: "rgba(255, 107, 53, 0.4)", // Bright orange with transparency
+              border: "none",
+              borderRadius: "0px",
+              pointerEvents: "none",
+              zIndex: 15, // Above entities but below context menu
+              boxShadow: "none",
+              boxSizing: "border-box", // Match Rnd's box-sizing
+              margin: 0,
+              padding: 0
+            }}
+          />
+        );
+      })}
       {/* Context Menu */}
       {contextMenu.visible && (
         <div
