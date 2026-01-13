@@ -203,7 +203,7 @@ function AggregatedResultsPage() {
             }}
           >
             <img
-              src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/${filename}`}
+              src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${filename}`}
               alt={getTitleFromFilename(filename)}
               style={{
                 width: '100%',
@@ -388,7 +388,7 @@ function AggregatedResultsPage() {
 
             {/* Image */}
             <img
-              src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/${selectedImage}`}
+              src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${selectedImage}`}
               alt={getTitleFromFilename(selectedImage)}
               style={{
                 maxWidth: '100%',

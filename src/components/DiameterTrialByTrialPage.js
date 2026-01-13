@@ -35,8 +35,8 @@ function DiameterTrialByTrialPage() {
   
   // Base path for diameter-specific plots
   const diameterPath = `${ASSETS_BASE_PATH}/diameter_${diameter}/cogsci_2025_trials`;
-  // Videos come from cogsci2025_tuned
-  const videoPath = `${ASSETS_BASE_PATH}/cogsci2025_tuned`;
+  // Videos come from cogsci_2025_trials_tuned_Jan102026
+  const videoPath = `${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026`;
 
   const navigateTrial = (direction) => {
     if (selectedTrial === null) return;

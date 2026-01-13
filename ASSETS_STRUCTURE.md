@@ -25,7 +25,7 @@ site_static_assets/
 │   ├── {trialName}_trajectory.png        # Trajectory visualization
 │   ├── {trialName}_plot.png              # Analysis plot
 │   └── {trialName}_stimulus.webm         # Stimulus video (WebM format)
-├── cogsci2025_tuned/                      # Cogsci 2025 trial data
+├── cogsci_2025_trials_tuned_Jan102026/                      # Cogsci 2025 trial data
 │   ├── {aggregated_file}.png             # Aggregated analysis files
 │   ├── {trialName}_trajectory.png        # Trial trajectory visualization
 │   ├── {trialName}_plot.png              # Trial analysis plot
@@ -84,9 +84,9 @@ src={`${ASSETS_BASE_PATH}/CandidateTrialsNov29_Plots/CT1A_stimulus.webm`}
 
 ---
 
-### 3. cogsci2025_tuned/
+### 3. cogsci_2025_trials_tuned_Jan102026/
 
-**Location:** `site_static_assets/cogsci2025_tuned/`
+**Location:** `site_static_assets/cogsci_2025_trials_tuned_Jan102026/`
 
 **Purpose:** Contains aggregated analysis files and trial-specific data for Cogsci 2025 experiments.
 
@@ -107,7 +107,7 @@ These are analysis files that aggregate data across multiple trials:
 
 **Usage Example:**
 ```javascript
-src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/targeted_logfreq.png`}
+src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/targeted_logfreq.png`}
 ```
 
 #### Trial-Specific Files
@@ -123,13 +123,13 @@ src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/targeted_logfreq.png`}
 **Usage Examples:**
 ```javascript
 // Trajectory image
-src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/E1_trajectory.png`}
+src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/E1_trajectory.png`}
 
 // Analysis plot
-src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/E1_plot.png`}
+src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/E1_plot.png`}
 
 // Stimulus video
-src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/E1_stimulus.mp4`}
+src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/E1_stimulus.mp4`}
 ```
 
 **Components:**
@@ -177,7 +177,7 @@ src={`${diameterPath}/E26_trajectory.png`}
 src={`${diameterPath}/E26_plot.png`}
 ```
 
-**Note:** Videos for diameter trials come from `cogsci2025_tuned/` directory, not from the diameter-specific directory.
+**Note:** Videos for diameter trials come from `cogsci_2025_trials_tuned_Jan102026/` directory, not from the diameter-specific directory.
 
 **Components:**
 - `src/components/DiameterAggregatedPage.js` - Aggregated plots
@@ -194,7 +194,7 @@ src={`${diameterPath}/E26_plot.png`}
 import { ASSETS_BASE_PATH } from '../constants';
 
 // Direct usage
-src={`${ASSETS_BASE_PATH}/cogsci2025_tuned/E1_trajectory.png`}
+src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/E1_trajectory.png`}
 
 // With variable construction
 const diameterPath = `${ASSETS_BASE_PATH}/diameter_0_8/cogsci_2025_trials`;
@@ -205,7 +205,7 @@ src={`${diameterPath}/E26_plot.png`}
 
 ```javascript
 // DON'T add leading slash - ASSETS_BASE_PATH already contains full URL
-src={`/${ASSETS_BASE_PATH}/cogsci2025_tuned/E1_trajectory.png`}  // ❌ Wrong
+src={`/${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/E1_trajectory.png`}  // ❌ Wrong
 
 // DON'T hardcode the URL
 src={`https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/...`}  // ❌ Wrong
@@ -219,7 +219,7 @@ When adding new assets to S3:
 
 1. **Upload to the correct directory** based on the asset type:
    - Candidate trials → `CandidateTrialsNov29_Plots/`
-   - Cogsci 2025 trials → `cogsci2025_tuned/`
+   - Cogsci 2025 trials → `cogsci_2025_trials_tuned_Jan102026/`
    - Diameter-specific trials → `diameter_{diameter}/cogsci_2025_trials/`
 
 2. **Follow the naming convention:**
@@ -248,8 +248,8 @@ When adding new assets to S3:
 | Component | Asset Directory | File Types |
 |-----------|----------------|------------|
 | `CandidateTrialsPage.js` | `CandidateTrialsNov29_Plots/` | `.png`, `.webm` |
-| `TrialByTrialPage.js` | `cogsci2025_tuned/` | `.png`, `.mp4` |
-| `AggregatedResultsPage.js` | `cogsci2025_tuned/` | `.png` (aggregated) |
+| `TrialByTrialPage.js` | `cogsci_2025_trials_tuned_Jan102026/` | `.png`, `.mp4` |
+| `AggregatedResultsPage.js` | `cogsci_2025_trials_tuned_Jan102026/` | `.png` (aggregated) |
 | `DiameterTrialByTrialPage.js` | `diameter_{d}/cogsci_2025_trials/` | `.png` |
 | `DiameterAggregatedPage.js` | `diameter_{d}/cogsci_2025_trials/` | `.png` |
 | `JTAPResultsPage.js` | Root, `CandidateTrialsNov29_Plots/` | `.gif`, `.png` |
