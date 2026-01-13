@@ -682,9 +682,21 @@ def get_metrics_csv():
     """
     Proxy endpoint to fetch metrics CSV from AWS S3.
     This avoids CORS issues when fetching directly from the frontend.
+    
+    Query parameters:
+    - diameter: Optional. If provided, fetches from varying_diameters/diameter_{diameter}/cogsci_2025_trials/per_trial_metrics.csv
+                Otherwise, fetches from cogsci_2025_trials_tuned_Jan102026/per_trial_metrics.csv
     """
     try:
-        csv_url = 'https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/cogsci_2025_trials_tuned_Jan102026/per_trial_metrics.csv'
+        diameter = request.args.get('diameter')
+        
+        if diameter:
+            # Fetch from diameter-specific folder (CSV is in cogsci_2025_trials subfolder)
+            csv_url = f'https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/varying_diameters/diameter_{diameter}/cogsci_2025_trials/per_trial_metrics.csv'
+        else:
+            # Default: fetch from cogsci_2025_trials_tuned_Jan102026
+            csv_url = 'https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/cogsci_2025_trials_tuned_Jan102026/per_trial_metrics.csv'
+        
         response = requests.get(csv_url, timeout=10)
         response.raise_for_status()
         

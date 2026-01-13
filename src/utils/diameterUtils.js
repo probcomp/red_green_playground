@@ -1,16 +1,20 @@
 /**
  * Diameter navigation utilities
- * Diameters are ordered from smallest to largest
+ * Diameters are integers from 0 to 100 (inclusive), representing percentages
  */
-export const DIAMETERS = ['0_5', '0_8', '0_9', '0_925', '0_95', '0_99'];
+export const DIAMETERS = Array.from({ length: 101 }, (_, i) => i.toString());
 
 /**
  * Get the index of a diameter in the ordered array
- * @param {string} diameter - Diameter string (e.g., "0_95")
+ * @param {string} diameter - Diameter string (e.g., "50" for 50%)
  * @returns {number} Index of the diameter, or -1 if not found
  */
 export const getDiameterIndex = (diameter) => {
-  return DIAMETERS.indexOf(diameter);
+  const diameterInt = parseInt(diameter, 10);
+  if (isNaN(diameterInt) || diameterInt < 0 || diameterInt > 100) {
+    return -1;
+  }
+  return diameterInt;
 };
 
 /**
@@ -20,10 +24,10 @@ export const getDiameterIndex = (diameter) => {
  */
 export const getNextDiameter = (diameter) => {
   const index = getDiameterIndex(diameter);
-  if (index === -1 || index === DIAMETERS.length - 1) {
+  if (index === -1 || index === 100) {
     return null;
   }
-  return DIAMETERS[index + 1];
+  return (index + 1).toString();
 };
 
 /**
@@ -36,15 +40,27 @@ export const getPrevDiameter = (diameter) => {
   if (index === -1 || index === 0) {
     return null;
   }
-  return DIAMETERS[index - 1];
+  return (index - 1).toString();
 };
 
 /**
- * Format diameter for display (e.g., "0_95" -> "95.00%")
- * @param {string} diameter - Diameter string (e.g., "0_95")
+ * Format diameter for display (e.g., "50" -> "50%")
+ * @param {string} diameter - Diameter string (e.g., "50")
  * @returns {string} Formatted diameter as percentage
  */
 export const formatDiameter = (diameter) => {
-  const num = diameter.replace('_', '.');
-  return `${(parseFloat(num) * 100).toFixed(2)}%`;
+  const diameterInt = parseInt(diameter, 10);
+  if (isNaN(diameterInt)) {
+    return `${diameter}%`;
+  }
+  return `${diameterInt}%`;
+};
+
+/**
+ * Get the diameter path for assets
+ * @param {string} diameter - Diameter string (e.g., "50")
+ * @returns {string} Path segment for the diameter folder
+ */
+export const getDiameterPath = (diameter) => {
+  return `diameter_${diameter}`;
 };

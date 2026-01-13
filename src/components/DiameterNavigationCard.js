@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DIAMETERS, getNextDiameter, getPrevDiameter, formatDiameter } from '../utils/diameterUtils';
 
@@ -9,6 +9,9 @@ import { DIAMETERS, getNextDiameter, getPrevDiameter, formatDiameter } from '../
 const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selectedImage = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isDragging, setIsDragging] = useState(false);
+  const sliderRef = useRef(null);
+  const currentDiameterInt = parseInt(currentDiameter, 10) || 0;
 
   const navigateToDiameter = (newDiameter) => {
     if (!newDiameter || newDiameter === currentDiameter) return;
@@ -57,6 +60,27 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
     navigateToDiameter(e.target.value);
   };
 
+  const handleSliderChange = (e) => {
+    const newDiameter = e.target.value;
+    navigateToDiameter(newDiameter);
+  };
+
+  const handleSliderMouseDown = () => {
+    setIsDragging(true);
+  };
+
+  const handleSliderMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      const handleMouseUp = () => setIsDragging(false);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => window.removeEventListener('mouseup', handleMouseUp);
+    }
+  }, [isDragging]);
+
   const prevDiameter = getPrevDiameter(currentDiameter);
   const nextDiameter = getNextDiameter(currentDiameter);
 
@@ -73,41 +97,47 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
         border: '2px solid #e2e8f0',
         zIndex: 1000,
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
         gap: '12px',
-        minWidth: '280px',
+        minWidth: '320px',
         backdropFilter: 'blur(10px)'
       }}
     >
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        flex: 1
-      }}>
-        <div style={{
-          fontSize: '12px',
-          fontWeight: '600',
-          color: '#64748b',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em'
-        }}>
-          Diameter
-        </div>
-        <div style={{
-          fontSize: '18px',
-          fontWeight: '700',
-          color: '#1e293b'
-        }}>
-          {formatDiameter(currentDiameter)}
-        </div>
-      </div>
-
-      <div style={{
-        display: 'flex',
         alignItems: 'center',
-        gap: '8px'
+        justifyContent: 'space-between',
+        gap: '12px'
       }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          flex: 1
+        }}>
+          <div style={{
+            fontSize: '12px',
+            fontWeight: '600',
+            color: '#64748b',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Diameter
+          </div>
+          <div style={{
+            fontSize: '18px',
+            fontWeight: '700',
+            color: '#1e293b'
+          }}>
+            {formatDiameter(currentDiameter)}
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
         <button
           onClick={handlePrevDiameter}
           disabled={!prevDiameter}
@@ -213,6 +243,112 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
         >
           →
         </button>
+        </div>
+      </div>
+
+      {/* Draggable Slider */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        width: '100%'
+      }}>
+        <span style={{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: '#64748b',
+          minWidth: '30px'
+        }}>
+          0%
+        </span>
+        <input
+          ref={sliderRef}
+          type="range"
+          min="0"
+          max="100"
+          value={currentDiameterInt}
+          onChange={handleSliderChange}
+          onMouseDown={handleSliderMouseDown}
+          onMouseUp={handleSliderMouseUp}
+          style={{
+            flex: 1,
+            height: '8px',
+            borderRadius: '4px',
+            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(currentDiameterInt / 100) * 100}%, #e2e8f0 ${(currentDiameterInt / 100) * 100}%, #e2e8f0 100%)`,
+            outline: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            WebkitAppearance: 'none',
+            appearance: 'none'
+          }}
+          onMouseMove={(e) => {
+            if (isDragging && e.buttons === 1 && sliderRef.current) {
+              const rect = sliderRef.current.getBoundingClientRect();
+              const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+              const newDiameter = Math.round(percent).toString();
+              if (newDiameter !== currentDiameter) {
+                navigateToDiameter(newDiameter);
+              }
+            }
+          }}
+        />
+        <span style={{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: '#64748b',
+          minWidth: '35px',
+          textAlign: 'right'
+        }}>
+          100%
+        </span>
+      </div>
+
+      {/* Dropdown (compact) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        width: '100%'
+      }}>
+        <label style={{
+          fontSize: '11px',
+          fontWeight: '600',
+          color: '#64748b',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }}>
+          Jump to:
+        </label>
+        <select
+          value={currentDiameter}
+          onChange={handleDropdownChange}
+          style={{
+            flex: 1,
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: '2px solid #e2e8f0',
+            backgroundColor: '#ffffff',
+            color: '#1e293b',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            outline: 'none',
+            transition: 'all 0.2s ease'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#3b82f6';
+            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = '#e2e8f0';
+            e.target.style.boxShadow = 'none';
+          }}
+        >
+          {DIAMETERS.map((d) => (
+            <option key={d} value={d}>
+              {formatDiameter(d)}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ const aggregatedFiles = [
   'targeted_P(decision)_partial_correlation.png',
   'targeted_P(green|decision)_partial_correlation.png',
   'targeted_logfreq.png',
+  'split_half_ecdf.png',
 ];
 
 // Map filenames to custom titles
@@ -29,6 +30,7 @@ const getTitleFromFilename = (filename) => {
     'targeted_P(decision)_partial_correlation.png': 'P(Decision) Partial Correlation (Occlusion Trials only)',
     'targeted_P(green|decision)_partial_correlation.png': 'P(Green|Decision) Partial Correlation (Occlusion Trials only)',
     'targeted_logfreq.png': 'Log Frequency Histogram (Occlusion Trials only) w/ baselines',
+    'split_half_ecdf.png': 'Split Half ECDF',
   };
   
   // Return custom title if available, otherwise fall back to automatic generation
@@ -52,7 +54,8 @@ const getCaption = (filename) => {
     'targeted_P(decision)_distribution.png': 'This plot shows the shape of the decision distribution: P(Decision) = P(Green) + P(Red) across all occluded timesteps. Note that this plot merely visualizes the distributional shape, but it does not imply alignment, because that requires a direct frame-by-frame comparison, which is shown on the left column of the targeted log frequency histogram plot.',
     'targeted_P(decision)_partial_correlation.png': 'The partial correlation here is a measure of the linear relationship between the JTAP Model and Humans for their respective P(Decision) across all occluded timesteps while controlling for the effects of a baseline model (Frozen or Decaying). Generally, this measure is used to remove confounders for correlation analysis, but we can think of this as how much the JTAP model additionally captures the patterns of human reasoning, while accounting for any shared explanatory power from a baseline model. I do not know if this is appropriate/accepted in the cognitive science field, but I thought this was an interesting and positive finding to share. Each dot in the violin plot indicates a trial.',
     'targeted_P(green|decision)_partial_correlation.png': 'The partial correlation here is a measure of the linear relationship between the JTAP Model and Humans for their respective P(Green|Decision) across all occluded timesteps while controlling for the effects of a baseline model (Frozen or Decaying). Generally, this measure is used to remove confounders for correlation analysis, but we can think of this as how much the JTAP model additionally captures the patterns of human reasoning, while accounting for any shared explanatory power from a baseline model. I do not know if this is appropriate/accepted in the cognitive science field, but I thought this was an interesting and positive finding to share. Each dot in the violin plot indicates a trial.',
-    'targeted_per_trial_metrics.png': 'In this plot, we look at a few metrics (RMSE, KL Divergence, and Discretized Mutual Information) for JTAP and baselines against human data for occlusion trials only. This is done by comparing the Red-Green lines at every timestep. The violin plot shows the distribution across the trials for the given metric. These represent a few different ways to quantify model-human alignment.'
+    'targeted_per_trial_metrics.png': 'In this plot, we look at a few metrics (RMSE, KL Divergence, and Discretized Mutual Information) for JTAP and baselines against human data for occlusion trials only. This is done by comparing the Red-Green lines at every timestep. The violin plot shows the distribution across the trials for the given metric. These represent a few different ways to quantify model-human alignment.',
+    'split_half_ecdf.png': ''
   };
   return captions[filename] || 'Caption not found';
 };

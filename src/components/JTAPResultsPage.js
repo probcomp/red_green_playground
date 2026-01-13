@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ASSETS_BASE_PATH } from '../constants';
-
-// Diameter configurations
-const diameters = ['0_5', '0_8', '0_9', '0_925', '0_95', '0_99'];
-
-const formatDiameter = (d) => {
-  const num = d.replace('_', '.');
-  return `${(parseFloat(num) * 100).toFixed(2)}%`;
-};
+import { DIAMETERS, formatDiameter } from '../utils/diameterUtils';
 
 function JTAPResultsPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
+  // Filter diameters based on search term
+  const filteredDiameters = DIAMETERS.filter(d => {
+    if (!searchTerm) return true;
+    const diameterInt = parseInt(d, 10);
+    return diameterInt.toString().includes(searchTerm) || formatDiameter(d).includes(searchTerm);
+  });
+
+  // Show first 20 by default, or all if showAll is true
+  const displayedDiameters = showAll ? filteredDiameters : filteredDiameters.slice(0, 20);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -206,71 +212,176 @@ function JTAPResultsPage() {
         <p style={{
           fontSize: '18px',
           color: '#64748b',
-          marginBottom: '32px',
+          marginBottom: '24px',
           lineHeight: '1.6'
         }}>
-          Results for different simulation diameters (as percentage of original diameter).
+          Results for different simulation diameters (0% to 100% of original diameter, in 1% increments).
         </p>
 
+        {/* Search and Filter Controls */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px',
-          marginBottom: '40px'
+          display: 'flex',
+          gap: '16px',
+          alignItems: 'center',
+          marginBottom: '24px',
+          flexWrap: 'wrap'
         }}>
-          {diameters.map((diameter) => (
+          <input
+            type="text"
+            placeholder="Search diameter (e.g., 50, 75%)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              padding: '10px 16px',
+              fontSize: '16px',
+              borderRadius: '8px',
+              border: '2px solid #e2e8f0',
+              backgroundColor: '#ffffff',
+              color: '#1e293b',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '250px',
+              flex: '1 1 300px'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#e2e8f0';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+          {!showAll && filteredDiameters.length > 20 && (
+            <button
+              onClick={() => setShowAll(true)}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: '2px solid #3b82f6',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#2563eb';
+                e.target.style.borderColor = '#2563eb';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#3b82f6';
+                e.target.style.borderColor = '#3b82f6';
+              }}
+            >
+              Show All ({filteredDiameters.length})
+            </button>
+          )}
+          {showAll && (
+            <button
+              onClick={() => setShowAll(false)}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: '2px solid #64748b',
+                backgroundColor: '#ffffff',
+                color: '#64748b',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f1f5f9';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#ffffff';
+              }}
+            >
+              Show Less
+            </button>
+          )}
+        </div>
+
+        {filteredDiameters.length === 0 ? (
+          <div style={{
+            padding: '40px',
+            textAlign: 'center',
+            color: '#64748b',
+            fontSize: '18px'
+          }}>
+            No diameters found matching "{searchTerm}"
+          </div>
+        ) : (
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '20px',
+              marginBottom: '40px'
+            }}>
+              {displayedDiameters.map((diameter) => (
             <div
               key={diameter}
               style={{
                 backgroundColor: '#ffffff',
                 borderRadius: '12px',
-                padding: '32px',
+                padding: '24px',
                 border: '2px solid #e2e8f0',
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '16px'
+                gap: '16px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.borderColor = '#e2e8f0';
               }}
             >
               <h3 style={{
-                fontSize: '22px',
-                fontWeight: '600',
+                fontSize: '20px',
+                fontWeight: '700',
                 color: '#1e293b',
-                margin: 0
+                margin: 0,
+                lineHeight: '1.2'
               }}>
                 {formatDiameter(diameter)} Diameter
               </h3>
-              <p style={{
-                fontSize: '14px',
-                color: '#64748b',
-                margin: 0,
-                lineHeight: '1.6'
-              }}>
-                Trial-by-trial plots and aggregated results for {formatDiameter(diameter)} of original diameter.
-              </p>
               <div style={{
                 display: 'flex',
-                gap: '12px',
-                marginTop: '8px'
+                gap: '10px',
+                marginTop: '4px'
               }}>
                 <Link
                   to={`/jtap/diameter/${diameter}/trial-by-trial`}
                   style={{
                     flex: 1,
                     textDecoration: 'none',
-                    color: 'inherit'
+                    color: 'inherit',
+                    minWidth: 0
                   }}
                 >
                   <div style={{
-                    padding: '12px 16px',
+                    padding: '10px 14px',
                     backgroundColor: '#eff6ff',
                     borderRadius: '8px',
                     textAlign: 'center',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontWeight: '600',
                     color: '#3b82f6',
                     transition: 'all 0.2s ease',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#dbeafe';
@@ -289,19 +400,23 @@ function JTAPResultsPage() {
                   style={{
                     flex: 1,
                     textDecoration: 'none',
-                    color: 'inherit'
+                    color: 'inherit',
+                    minWidth: 0
                   }}
                 >
                   <div style={{
-                    padding: '12px 16px',
+                    padding: '10px 14px',
                     backgroundColor: '#f3e8ff',
                     borderRadius: '8px',
                     textAlign: 'center',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontWeight: '600',
                     color: '#8b5cf6',
                     transition: 'all 0.2s ease',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#e9d5ff';
@@ -317,9 +432,20 @@ function JTAPResultsPage() {
                 </Link>
               </div>
             </div>
-          ))}
-          
-        </div>
+              ))}
+            </div>
+            {!showAll && filteredDiameters.length > 20 && (
+              <div style={{
+                textAlign: 'center',
+                marginTop: '24px',
+                color: '#64748b',
+                fontSize: '14px'
+              }}>
+                Showing 20 of {filteredDiameters.length} diameters. Use search or click "Show All" to see more.
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
