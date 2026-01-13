@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory, send_file
 import os
 import subprocess
 import tempfile
+import requests
 
 # PHYSICS SIM
 
@@ -675,6 +676,22 @@ def clear_simulation():
     GLOBAL_SIM_DATA = None
     print("Simulation cleared successfully.")
     return jsonify({"status": "success", "message": "Simulation cleared."})
+
+@app.route('/metrics_csv', methods=['GET'])
+def get_metrics_csv():
+    """
+    Proxy endpoint to fetch metrics CSV from AWS S3.
+    This avoids CORS issues when fetching directly from the frontend.
+    """
+    try:
+        csv_url = 'https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/cogsci_2025_trials_tuned_Jan102026/per_trial_metrics.csv'
+        response = requests.get(csv_url, timeout=10)
+        response.raise_for_status()
+        
+        return response.text, 200, {'Content-Type': 'text/csv; charset=utf-8'}
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching CSV from S3: {e}")
+        return jsonify({"error": f"Failed to fetch CSV: {str(e)}"}), 500
 
 @app.route('/convert_to_mp4', methods=['POST'])
 def convert_to_mp4():
