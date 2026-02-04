@@ -1,8 +1,8 @@
 /**
  * Diameter navigation utilities
- * Diameters are integers from 0 to 100 (inclusive), representing percentages
+ * Diameters are integers from 10 to 100 (inclusive), representing percentages
  */
-export const DIAMETERS = Array.from({ length: 101 }, (_, i) => i.toString());
+export const DIAMETERS = Array.from({ length: 91 }, (_, i) => (i + 10).toString());
 
 /**
  * Get the index of a diameter in the ordered array
@@ -11,7 +11,7 @@ export const DIAMETERS = Array.from({ length: 101 }, (_, i) => i.toString());
  */
 export const getDiameterIndex = (diameter) => {
   const diameterInt = parseInt(diameter, 10);
-  if (isNaN(diameterInt) || diameterInt < 0 || diameterInt > 100) {
+  if (isNaN(diameterInt) || diameterInt < 10 || diameterInt > 100) {
     return -1;
   }
   return diameterInt;
@@ -37,7 +37,7 @@ export const getNextDiameter = (diameter) => {
  */
 export const getPrevDiameter = (diameter) => {
   const index = getDiameterIndex(diameter);
-  if (index === -1 || index === 0) {
+  if (index === -1 || index === 10) {
     return null;
   }
   return (index - 1).toString();

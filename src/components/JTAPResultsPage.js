@@ -215,7 +215,7 @@ function JTAPResultsPage() {
           marginBottom: '24px',
           lineHeight: '1.6'
         }}>
-          Results for different simulation diameters (0% to 100% of original diameter, in 1% increments).
+          Results for different simulation diameters (10% to 100% of original diameter, in 1% increments).
         </p>
 
         {/* Search and Filter Controls */}
