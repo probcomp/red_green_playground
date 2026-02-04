@@ -11,7 +11,7 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
   const location = useLocation();
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef(null);
-  const currentDiameterInt = parseInt(currentDiameter, 10) || 0;
+  const currentDiameterInt = Math.max(10, Math.min(100, parseInt(currentDiameter, 10) || 10));
 
   const navigateToDiameter = (newDiameter) => {
     if (!newDiameter || newDiameter === currentDiameter) return;
@@ -259,12 +259,12 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
           color: '#64748b',
           minWidth: '30px'
         }}>
-          0%
+          10%
         </span>
         <input
           ref={sliderRef}
           type="range"
-          min="0"
+          min="10"
           max="100"
           value={currentDiameterInt}
           onChange={handleSliderChange}
@@ -274,7 +274,7 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
             flex: 1,
             height: '8px',
             borderRadius: '4px',
-            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(currentDiameterInt / 100) * 100}%, #e2e8f0 ${(currentDiameterInt / 100) * 100}%, #e2e8f0 100%)`,
+            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((currentDiameterInt - 10) / 90) * 100}%, #e2e8f0 ${((currentDiameterInt - 10) / 90) * 100}%, #e2e8f0 100%)`,
             outline: 'none',
             cursor: isDragging ? 'grabbing' : 'grab',
             WebkitAppearance: 'none',
@@ -283,8 +283,8 @@ const DiameterNavigationCard = ({ currentDiameter, selectedTrial = null, selecte
           onMouseMove={(e) => {
             if (isDragging && e.buttons === 1 && sliderRef.current) {
               const rect = sliderRef.current.getBoundingClientRect();
-              const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-              const newDiameter = Math.round(percent).toString();
+              const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+              const newDiameter = Math.round(10 + percent * 90).toString();
               if (newDiameter !== currentDiameter) {
                 navigateToDiameter(newDiameter);
               }

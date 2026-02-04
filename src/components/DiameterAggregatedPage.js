@@ -66,7 +66,16 @@ function DiameterAggregatedPage() {
   
   // Base path for diameter-specific plots (new structure: varying_diameters/diameter_{percentage}/cogsci_2025_trials/)
   const diameterPath = `${ASSETS_BASE_PATH}/varying_diameters/diameter_${diameter}/cogsci_2025_trials`;
-  
+
+  // Redirect invalid diameters (0–9) to 10%; diameters below 10% are not supported
+  useEffect(() => {
+    const d = parseInt(diameter, 10);
+    if (!Number.isNaN(d) && d >= 0 && d < 10) {
+      const search = searchParams.toString();
+      navigate(`/jtap/diameter/10/aggregated${search ? `?${search}` : ''}`, { replace: true });
+    }
+  }, [diameter, navigate, searchParams]);
+
   // Restore selected image from URL on mount and when diameter changes
   useEffect(() => {
     const imageParam = searchParams.get('image');

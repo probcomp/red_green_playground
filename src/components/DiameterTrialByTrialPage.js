@@ -103,7 +103,16 @@ function DiameterTrialByTrialPage() {
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState(null);
   const allTrials = Array.from({ length: 50 }, (_, i) => `E${i + 1}`);
-  
+
+  // Redirect invalid diameters (0–9) to 10%; diameters below 10% are not supported
+  useEffect(() => {
+    const d = parseInt(diameter, 10);
+    if (!Number.isNaN(d) && d >= 0 && d < 10) {
+      const search = searchParams.toString();
+      navigate(`/jtap/diameter/10/trial-by-trial${search ? `?${search}` : ''}`, { replace: true });
+    }
+  }, [diameter, navigate, searchParams]);
+
   // Restore selected trial from URL on mount and when diameter changes
   useEffect(() => {
     const trialParam = searchParams.get('trial');
