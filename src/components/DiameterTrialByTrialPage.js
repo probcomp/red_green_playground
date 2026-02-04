@@ -113,6 +113,14 @@ function DiameterTrialByTrialPage() {
     }
   }, [diameter, navigate, searchParams]);
 
+  // Remember last viewed diameter for JTAP Results "back" navigation (session only; resets when tab closes)
+  useEffect(() => {
+    const d = parseInt(diameter, 10);
+    if (!Number.isNaN(d) && d >= 10 && d <= 100) {
+      sessionStorage.setItem('jtap_last_diameter', diameter);
+    }
+  }, [diameter]);
+
   // Restore selected trial from URL on mount and when diameter changes
   useEffect(() => {
     const trialParam = searchParams.get('trial');

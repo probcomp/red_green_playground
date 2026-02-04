@@ -1,21 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ASSETS_BASE_PATH } from '../constants';
 import { DIAMETERS, formatDiameter } from '../utils/diameterUtils';
 
+const JTAP_LAST_DIAMETER_KEY = 'jtap_last_diameter';
+
 function JTAPResultsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAll, setShowAll] = useState(false);
-
-  // Filter diameters based on search term
-  const filteredDiameters = DIAMETERS.filter(d => {
-    if (!searchTerm) return true;
-    const diameterInt = parseInt(d, 10);
-    return diameterInt.toString().includes(searchTerm) || formatDiameter(d).includes(searchTerm);
-  });
-
-  // Show first 20 by default, or all if showAll is true
-  const displayedDiameters = showAll ? filteredDiameters : filteredDiameters.slice(0, 20);
+  // Last viewed diameter (session only: default 100%, persists until tab/window closes)
+  const lastDiameter = (() => {
+    try {
+      const stored = sessionStorage.getItem(JTAP_LAST_DIAMETER_KEY);
+      if (stored && DIAMETERS.includes(stored)) return stored;
+    } catch (_) { /* ignore */ }
+    return '100';
+  })();
 
   return (
     <div style={{
@@ -198,7 +196,7 @@ function JTAPResultsPage() {
           </Link>
         </div>
 
-        {/* Diameter Results Section */}
+        {/* Diameter Results Section – single card; last diameter remembered for session */}
         <h2 style={{
           fontSize: '36px',
           fontWeight: '700',
@@ -215,237 +213,128 @@ function JTAPResultsPage() {
           marginBottom: '24px',
           lineHeight: '1.6'
         }}>
-          Results for different simulation diameters (10% to 100% of original diameter, in 1% increments).
+          Results for different simulation diameters (10% to 100%). Use the diameter controls on the results page to change value; your last viewed diameter is remembered for this session.
         </p>
 
-        {/* Search and Filter Controls */}
         <div style={{
-          display: 'flex',
-          gap: '16px',
-          alignItems: 'center',
-          marginBottom: '24px',
-          flexWrap: 'wrap'
+          maxWidth: '480px',
+          marginBottom: '40px'
         }}>
-          <input
-            type="text"
-            placeholder="Search diameter (e.g., 50, 75%)"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+          <div
             style={{
-              padding: '10px 16px',
-              fontSize: '16px',
-              borderRadius: '8px',
-              border: '2px solid #e2e8f0',
               backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '28px',
+              border: '2px solid #e2e8f0',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.borderColor = '#cbd5e1';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+            }}
+          >
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '700',
               color: '#1e293b',
-              outline: 'none',
-              transition: 'all 0.2s ease',
-              minWidth: '250px',
-              flex: '1 1 300px'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
-              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e2e8f0';
-              e.target.style.boxShadow = 'none';
-            }}
-          />
-          {!showAll && filteredDiameters.length > 20 && (
-            <button
-              onClick={() => setShowAll(true)}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                fontWeight: '600',
-                borderRadius: '8px',
-                border: '2px solid #3b82f6',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#2563eb';
-                e.target.style.borderColor = '#2563eb';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#3b82f6';
-                e.target.style.borderColor = '#3b82f6';
-              }}
-            >
-              Show All ({filteredDiameters.length})
-            </button>
-          )}
-          {showAll && (
-            <button
-              onClick={() => setShowAll(false)}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                fontWeight: '600',
-                borderRadius: '8px',
-                border: '2px solid #64748b',
-                backgroundColor: '#ffffff',
-                color: '#64748b',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#f1f5f9';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#ffffff';
-              }}
-            >
-              Show Less
-            </button>
-          )}
-        </div>
-
-        {filteredDiameters.length === 0 ? (
-          <div style={{
-            padding: '40px',
-            textAlign: 'center',
-            color: '#64748b',
-            fontSize: '18px'
-          }}>
-            No diameters found matching "{searchTerm}"
-          </div>
-        ) : (
-          <>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '20px',
-              marginBottom: '40px'
+              margin: 0,
+              lineHeight: '1.2'
             }}>
-              {displayedDiameters.map((diameter) => (
-            <div
-              key={diameter}
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '2px solid #e2e8f0',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                e.currentTarget.style.borderColor = '#cbd5e1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
-                e.currentTarget.style.borderColor = '#e2e8f0';
-              }}
-            >
-              <h3 style={{
-                fontSize: '20px',
-                fontWeight: '700',
-                color: '#1e293b',
-                margin: 0,
-                lineHeight: '1.2'
-              }}>
-                {formatDiameter(diameter)} Diameter
-              </h3>
-              <div style={{
-                display: 'flex',
-                gap: '10px',
-                marginTop: '4px'
-              }}>
-                <Link
-                  to={`/jtap/diameter/${diameter}/trial-by-trial`}
-                  style={{
-                    flex: 1,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    minWidth: 0
-                  }}
-                >
-                  <div style={{
-                    padding: '10px 14px',
-                    backgroundColor: '#eff6ff',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: '#3b82f6',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dbeafe';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#eff6ff';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                  >
-                    Trial-by-Trial
-                  </div>
-                </Link>
-                <Link
-                  to={`/jtap/diameter/${diameter}/aggregated`}
-                  style={{
-                    flex: 1,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    minWidth: 0
-                  }}
-                >
-                  <div style={{
-                    padding: '10px 14px',
-                    backgroundColor: '#f3e8ff',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: '#8b5cf6',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e9d5ff';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f3e8ff';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                  >
-                    Aggregated
-                  </div>
-                </Link>
-              </div>
-            </div>
-              ))}
-            </div>
-            {!showAll && filteredDiameters.length > 20 && (
-              <div style={{
-                textAlign: 'center',
-                marginTop: '24px',
+              Diameter variation
+            </h3>
+            {lastDiameter !== '100' && (
+              <p style={{
+                fontSize: '14px',
                 color: '#64748b',
-                fontSize: '14px'
+                margin: 0
               }}>
-                Showing 20 of {filteredDiameters.length} diameters. Use search or click "Show All" to see more.
-              </div>
+                Resuming at {formatDiameter(lastDiameter)}
+              </p>
             )}
-          </>
-        )}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginTop: '4px'
+            }}>
+              <Link
+                to={`/jtap/diameter/${lastDiameter}/trial-by-trial`}
+                style={{
+                  flex: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  minWidth: 0
+                }}
+              >
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#eff6ff',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#3b82f6',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                >
+                  Trial-by-Trial
+                </div>
+              </Link>
+              <Link
+                to={`/jtap/diameter/${lastDiameter}/aggregated`}
+                style={{
+                  flex: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  minWidth: 0
+                }}
+              >
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f3e8ff',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#8b5cf6',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e9d5ff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3e8ff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                >
+                  Aggregated
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
