@@ -196,7 +196,7 @@ function JTAPResultsPage() {
           </Link>
         </div>
 
-        {/* Diameter Results Section – single card; last diameter remembered for session */}
+        {/* Extra Results Section – diameter and other analyses */}
         <h2 style={{
           fontSize: '36px',
           fontWeight: '700',
@@ -205,7 +205,7 @@ function JTAPResultsPage() {
           marginBottom: '24px',
           letterSpacing: '-0.025em'
         }}>
-          Diameter Variations
+          Extra Results
         </h2>
         <p style={{
           fontSize: '18px',
@@ -213,13 +213,16 @@ function JTAPResultsPage() {
           marginBottom: '24px',
           lineHeight: '1.6'
         }}>
-          Results for different simulation diameters (10% to 100%). Use the diameter controls on the results page to change value; your last viewed diameter is remembered for this session.
+          Additional analyses beyond the main tuned and candidate trial results, including diameter variations and cardinal direction analyses.
         </p>
 
         <div style={{
-          maxWidth: '480px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '24px',
           marginBottom: '40px'
         }}>
+          {/* Diameter variation card */}
           <div
             style={{
               backgroundColor: '#ffffff',
@@ -334,6 +337,63 @@ function JTAPResultsPage() {
               </Link>
             </div>
           </div>
+
+          {/* Cardinal direction analysis card */}
+          <Link
+            to="/jtap/cardinal-direction-analysis"
+            style={{
+              textDecoration: 'none',
+              color: 'inherit'
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '28px',
+                border: '2px solid #e2e8f0',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  color: '#1e293b',
+                  margin: 0,
+                  lineHeight: '1.2'
+                }}
+              >
+                Cardinal direction analysis
+              </h3>
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: '#64748b',
+                  margin: 0,
+                  lineHeight: '1.6'
+                }}
+              >
+                Explore 50 cardinal-direction plots (E1–E50), sorted by your chosen loss metric,
+                and inspect the underlying trial-by-trial result for each direction.
+              </p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
