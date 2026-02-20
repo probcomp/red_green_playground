@@ -43,9 +43,6 @@ function App() {
   // Strict occlusion mode (default: true)
   const [strictOcclusionMode, setStrictOcclusionMode] = useState(true);
 
-  // Overlap validation
-  const [overlapValidation, setOverlapValidation] = useState({ valid: true, overlapRegions: [] });
-
   // Use hooks for state management
   const entitiesHook = useEntities(worldWidth, worldHeight);
   const { entities, setEntities, contextMenu, setContextMenu, addEntity: addEntityBase, updateEntity, deleteEntity, clearAllEntities, handleContextMenu } = entitiesHook;
@@ -79,11 +76,8 @@ function App() {
     };
   }, [moveScene]);
 
-  // Validate overlaps whenever entities or strict mode changes
-  useEffect(() => {
-    const validation = validateEntityOverlaps(entities, strictOcclusionMode);
-    setOverlapValidation(validation);
-  }, [entities, strictOcclusionMode]);
+  // Derive overlap validation from current entities and strict mode (no effect = no stale state after rotate/toggle)
+  const overlapValidation = validateEntityOverlaps(entities, strictOcclusionMode);
 
   // Auto-simulate when keyDistractors change
   useEffect(() => {

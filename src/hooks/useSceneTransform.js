@@ -93,10 +93,13 @@ export const useSceneTransform = (entities, setEntities, worldWidth, worldHeight
           newHeight = entity.width;
         }
 
-        // Calculate new position (bottom-left corner, which is what entity.y represents)
-        // This applies to ALL entity types including sensors, targets, etc.
-        const newX = Math.max(0, Math.min(newEntityCenterX - newWidth / 2, worldWidth - newWidth));
-        const newY = Math.max(0, Math.min(newEntityCenterY - newHeight / 2, worldHeight - newHeight));
+        // Calculate new position (bottom-left corner), clamp to world, then round to avoid float drift
+        // that can cause false barrier/barrier or barrier/sensor overlaps after rotation
+        const PRECISION = 1e6;
+        const rawX = Math.max(0, Math.min(newEntityCenterX - newWidth / 2, worldWidth - newWidth));
+        const rawY = Math.max(0, Math.min(newEntityCenterY - newHeight / 2, worldHeight - newHeight));
+        const newX = Math.round(rawX * PRECISION) / PRECISION;
+        const newY = Math.round(rawY * PRECISION) / PRECISION;
 
         // Rotate the target direction if it's a target
         // The direction needs to rotate to maintain the same relative direction in the rotated scene

@@ -101,8 +101,12 @@ export const validateBallPositions = (entities, keyDistractors = [], mode = 'reg
   return { valid: true };
 };
 
+/** Minimum overlap in world units to count as overlap; below this = touching (avoids false positives from float/clamping) */
+const OVERLAP_EPSILON = 1e-5;
+
 /**
  * Check if two rectangles overlap (not just touching)
+ * Uses a small epsilon so floating-point or clamping-induced micro-overlaps after rotation are not counted.
  * @param {number} x1 - Rectangle 1 X (left)
  * @param {number} y1 - Rectangle 1 Y (bottom)
  * @param {number} w1 - Rectangle 1 width
@@ -114,10 +118,11 @@ export const validateBallPositions = (entities, keyDistractors = [], mode = 'reg
  * @returns {boolean} True if rectangles overlap (not just touching)
  */
 export const checkRectangleOverlap = (x1, y1, w1, h1, x2, y2, w2, h2) => {
-  // Check if rectangles overlap (not just touching)
-  // Overlap means: x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2
-  // This returns true only if there's actual area overlap (not just touching edges)
-  return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+  // Overlap means: gap between intervals is negative; touching means gap === 0.
+  // Require overlap to exceed epsilon so we don't flag float/clamping noise.
+  const overlapX = Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2);
+  const overlapY = Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2);
+  return overlapX > OVERLAP_EPSILON && overlapY > OVERLAP_EPSILON;
 };
 
 /**
@@ -133,17 +138,16 @@ export const checkRectangleOverlap = (x1, y1, w1, h1, x2, y2, w2, h2) => {
  * @returns {{x: number, y: number, width: number, height: number} | null} Overlap region or null if no overlap
  */
 export const calculateOverlapRegion = (x1, y1, w1, h1, x2, y2, w2, h2) => {
-  if (!checkRectangleOverlap(x1, y1, w1, h1, x2, y2, w2, h2)) {
-    return null;
-  }
-
-  // Calculate overlap region
   const overlapX = Math.max(x1, x2);
   const overlapY = Math.max(y1, y2);
   const overlapRight = Math.min(x1 + w1, x2 + w2);
   const overlapTop = Math.min(y1 + h1, y2 + h2);
   const overlapWidth = overlapRight - overlapX;
   const overlapHeight = overlapTop - overlapY;
+  // Treat as no overlap if below epsilon (touching / float noise)
+  if (overlapWidth <= OVERLAP_EPSILON || overlapHeight <= OVERLAP_EPSILON) {
+    return null;
+  }
 
   return {
     x: overlapX,
