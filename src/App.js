@@ -3,6 +3,7 @@ import VideoPlayer from "./components/VideoPlayer";
 import NavigationBar from "./components/playground/NavigationBar";
 import SimulationSettingsPanel from "./components/playground/SimulationSettingsPanel";
 import SceneControlsPanel from "./components/playground/SceneControlsPanel";
+import TrajectoryScrubPanel from "./components/playground/TrajectoryScrubPanel";
 import OcclusionPresetsPanel from "./components/playground/OcclusionPresetsPanel";
 import DistractorControlsPanel from "./components/playground/DistractorControlsPanel";
 import EntityCanvas from "./components/playground/EntityCanvas";
@@ -47,6 +48,10 @@ function App() {
 
   // Occlusion presets for this session (occluders + windows only)
   const [occlusionPresets, setOcclusionPresets] = useState([]);
+
+  // Trajectory scrub state
+  const [scrubEnabled, setScrubEnabled] = useState(false);
+  const [scrubFrame, setScrubFrame] = useState(0);
 
   // Use hooks for state management
   const entitiesHook = useEntities(worldWidth, worldHeight);
@@ -131,6 +136,9 @@ function App() {
       worldWidth,
       worldHeight
     };
+    // Reset scrub UI when starting a fresh simulation
+    setScrubEnabled(false);
+    setScrubFrame(0);
     handleSimulateBase(entitiesForSimulation, simulationParams, mode, keyDistractors, randomDistractorParams, autoRun);
   };
 
@@ -281,6 +289,47 @@ function App() {
     setOcclusionPresets((prev) => prev.filter((p) => p.id !== presetId));
   };
 
+  // Trajectory scrub helpers
+  const applyScrubFrameToTarget = (frameIndex) => {
+    if (!simData || !simData.step_data) return;
+    const step = simData.step_data[frameIndex];
+    if (!step) return;
+    const { x, y, dir } = step;
+    setEntities((prev) =>
+      prev.map((e) =>
+        e.type === "target"
+          ? {
+              ...e,
+              x,
+              y,
+              direction: dir,
+            }
+          : e
+      )
+    );
+    if (dir !== undefined) {
+      setTargetDirection(dir);
+      setDirectionInput(((dir || 0) * (180 / Math.PI)).toString());
+    }
+    // Also sync selected frame used by VideoPlayer / distractor editor
+    setSelectedFrame(frameIndex);
+  };
+
+  const handleToggleScrubEnabled = (enabled) => {
+    setScrubEnabled(enabled);
+    if (enabled && simData && simData.step_data) {
+      const initialFrame = scrubFrame ?? 0;
+      applyScrubFrameToTarget(initialFrame);
+    }
+  };
+
+  const handleScrubFrameChange = (frameIndex) => {
+    setScrubFrame(frameIndex);
+    if (scrubEnabled) {
+      applyScrubFrameToTarget(frameIndex);
+    }
+  };
+
   const handleCanvasClick = () => {
     setContextMenu({ visible: false, x: 0, y: 0, entityId: null });
   };
@@ -340,7 +389,7 @@ function App() {
         alignItems: "flex-start", 
         gap: "24px",
         padding: "24px",
-        overflow: "auto"
+        overflow: "hidden"
       }}>
         {/* Left Side - Simulation Settings */}
         <div style={{ 
@@ -348,7 +397,10 @@ function App() {
           flexDirection: "column", 
           gap: "20px",
           maxWidth: "300px",
-          flexShrink: 0
+          flexShrink: 0,
+          height: "100%",
+          overflowY: "auto",
+          paddingRight: "4px"
         }}>
           <SimulationSettingsPanel
             videoLength={videoLength}
@@ -374,6 +426,14 @@ function App() {
             onMovementUnitChange={setMovementUnit}
             onRotateScene={rotateScene}
             hasEntities={entities.length > 0}
+          />
+
+          <TrajectoryScrubPanel
+            enabled={scrubEnabled}
+            onToggleEnabled={handleToggleScrubEnabled}
+            simData={simData}
+            scrubFrame={scrubFrame}
+            onScrubFrameChange={handleScrubFrameChange}
           />
 
           <OcclusionPresetsPanel
