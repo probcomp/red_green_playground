@@ -3,6 +3,7 @@ import VideoPlayer from "./components/VideoPlayer";
 import NavigationBar from "./components/playground/NavigationBar";
 import SimulationSettingsPanel from "./components/playground/SimulationSettingsPanel";
 import SceneControlsPanel from "./components/playground/SceneControlsPanel";
+import OcclusionPresetsPanel from "./components/playground/OcclusionPresetsPanel";
 import DistractorControlsPanel from "./components/playground/DistractorControlsPanel";
 import EntityCanvas from "./components/playground/EntityCanvas";
 import ControlBar from "./components/playground/ControlBar";
@@ -43,6 +44,9 @@ function App() {
 
   // Strict occlusion mode (default: true)
   const [strictOcclusionMode, setStrictOcclusionMode] = useState(true);
+
+  // Occlusion presets for this session (occluders + windows only)
+  const [occlusionPresets, setOcclusionPresets] = useState([]);
 
   // Use hooks for state management
   const entitiesHook = useEntities(worldWidth, worldHeight);
@@ -237,6 +241,46 @@ function App() {
     updateEntityFromResize(entity, ref, position);
   };
 
+  // Occlusion preset handlers (session-only)
+  const handleAddOcclusionPreset = () => {
+    const occlusionEntities = entities.filter(
+      (e) => e.type === "occluder" || e.type === "window"
+    );
+    if (occlusionEntities.length === 0) {
+      alert("No occluders or windows to save in a preset.");
+      return;
+    }
+    const defaultName = `Preset ${occlusionPresets.length + 1}`;
+    const name = window.prompt("Name this occlusion preset:", defaultName);
+    if (!name) return;
+    const preset = {
+      id: Date.now().toString(),
+      name,
+      occlusionEntities: occlusionEntities.map((e) => ({ ...e })),
+    };
+    setOcclusionPresets((prev) => [...prev, preset]);
+  };
+
+  const handleLoadOcclusionPreset = (presetId) => {
+    const preset = occlusionPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+    const confirmed = window.confirm(
+      `Load occlusion preset "${preset.name}"? This will replace current occluders and windows and run a new simulation.`
+    );
+    if (!confirmed) return;
+
+    const nonOcclusionEntities = entities.filter(
+      (e) => e.type !== "occluder" && e.type !== "window"
+    );
+    const newEntities = [...nonOcclusionEntities, ...preset.occlusionEntities.map((e) => ({ ...e }))];
+    setEntities(newEntities);
+    setShouldAutoSimulate(true);
+  };
+
+  const handleDeleteOcclusionPreset = (presetId) => {
+    setOcclusionPresets((prev) => prev.filter((p) => p.id !== presetId));
+  };
+
   const handleCanvasClick = () => {
     setContextMenu({ visible: false, x: 0, y: 0, entityId: null });
   };
@@ -330,6 +374,14 @@ function App() {
             onMovementUnitChange={setMovementUnit}
             onRotateScene={rotateScene}
             hasEntities={entities.length > 0}
+          />
+
+          <OcclusionPresetsPanel
+            presets={occlusionPresets}
+            onAddPreset={handleAddOcclusionPreset}
+            onLoadPreset={handleLoadOcclusionPreset}
+            onDeletePreset={handleDeleteOcclusionPreset}
+            hasOcclusion={entities.some(e => e.type === "occluder" || e.type === "window")}
           />
 
           {mode === "distractor" && (
