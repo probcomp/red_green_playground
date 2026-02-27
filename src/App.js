@@ -14,6 +14,7 @@ import { useTargetDirection } from "./hooks/useTargetDirection";
 import { useSceneTransform } from "./hooks/useSceneTransform";
 import { createFileLoadHandler, createSetSaveDirectoryHandler, createSaveDataHandler } from "./utils/fileUtils";
 import { validateEntityOverlaps } from "./utils/collisionUtils";
+import { getEntitiesWithWindowsApplied } from "./utils/occluderUtils";
 import { DEFAULT_RANDOM_DISTRACTOR_PARAMS, VID_RES, PX_SCALE, INTERVAL, BORDER_PX, RES_MULTIPLIER } from "./constants";
 
 function App() {
@@ -76,8 +77,9 @@ function App() {
     };
   }, [moveScene]);
 
-  // Derive overlap validation from current entities and strict mode (no effect = no stale state after rotate/toggle)
-  const overlapValidation = validateEntityOverlaps(entities, strictOcclusionMode);
+  // Derive effective occluders after applying windows, and validate overlaps against that.
+  const { entitiesForSimulation, occluderPieces } = getEntitiesWithWindowsApplied(entities);
+  const overlapValidation = validateEntityOverlaps(entitiesForSimulation, strictOcclusionMode);
 
   // Auto-simulate when keyDistractors change
   useEffect(() => {
@@ -125,7 +127,7 @@ function App() {
       worldWidth,
       worldHeight
     };
-    handleSimulateBase(entities, simulationParams, mode, keyDistractors, randomDistractorParams, autoRun);
+    handleSimulateBase(entitiesForSimulation, simulationParams, mode, keyDistractors, randomDistractorParams, autoRun);
   };
 
   // File operation handlers
@@ -151,7 +153,7 @@ function App() {
 
   const handleSavedata = createSaveDataHandler({
     simData,
-    entities,
+    entities: entitiesForSimulation,
     mode,
     keyDistractors,
     randomDistractorParams,
@@ -168,7 +170,7 @@ function App() {
   });
 
   // Entity canvas handlers
-  const handleEntityDragStop = (entity, d) => {
+  const updateEntityFromDrag = (entity, d) => {
     const px_scale = PX_SCALE;
     const border_px = BORDER_PX;
     const interval = INTERVAL;
@@ -183,7 +185,6 @@ function App() {
       y: Math.max(0, Math.min(snappedY, worldHeight - entity.height)),
     };
     
-    // Update entity - validation will happen automatically via useEffect
     updateEntity(entity.id, updatedEntity);
 
     // Update target direction if it's a target
@@ -193,7 +194,15 @@ function App() {
     }
   };
 
-  const handleEntityResizeStop = (entity, ref, position) => {
+  const handleEntityDrag = (entity, d) => {
+    updateEntityFromDrag(entity, d);
+  };
+
+  const handleEntityDragStop = (entity, d) => {
+    updateEntityFromDrag(entity, d);
+  };
+
+  const updateEntityFromResize = (entity, ref, position) => {
     if (entity.type === "target") return;
     
     const px_scale = PX_SCALE;
@@ -217,8 +226,15 @@ function App() {
       height: snappedHeight,
     };
     
-    // Update entity - validation will happen automatically via useEffect
     updateEntity(entity.id, updatedEntity);
+  };
+
+  const handleEntityResize = (entity, ref, position) => {
+    updateEntityFromResize(entity, ref, position);
+  };
+
+  const handleEntityResizeStop = (entity, ref, position) => {
+    updateEntityFromResize(entity, ref, position);
   };
 
   const handleCanvasClick = () => {
@@ -342,6 +358,7 @@ function App() {
         }}>
           <EntityCanvas
             entities={entities}
+            occluderPieces={occluderPieces}
             worldWidth={worldWidth}
             worldHeight={worldHeight}
             targetDirection={targetDirection}

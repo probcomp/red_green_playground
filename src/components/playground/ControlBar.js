@@ -66,6 +66,31 @@ const ControlBar = ({
             Add Occluder
           </button>
           <button
+            onClick={() => onAddEntity(ENTITY_TYPES.WINDOW)}
+            style={{ 
+              background: "linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)", 
+              color: "#111827", 
+              padding: "8px 14px", 
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+            }}
+          >
+            Add Window
+          </button>
+          <button
             onClick={() => onAddEntity(ENTITY_TYPES.BARRIER)}
             style={{ 
               background: "linear-gradient(135deg, #374151 0%, #1f2937 100%)", 

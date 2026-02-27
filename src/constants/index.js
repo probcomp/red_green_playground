@@ -35,7 +35,8 @@ export const ENTITY_TYPES = {
   BARRIER: 'barrier',
   RED_SENSOR: 'red_sensor',
   GREEN_SENSOR: 'green_sensor',
-  TARGET: 'target'
+  TARGET: 'target',
+  WINDOW: 'window'
 };
 
 // Entity colors
@@ -44,7 +45,8 @@ export const ENTITY_COLORS = {
   barrier: '#1f2937',
   red_sensor: '#ef4444',
   green_sensor: '#10b981',
-  target: '#3b82f6'
+  target: '#3b82f6',
+  window: 'transparent'
 };
 
 // Modes

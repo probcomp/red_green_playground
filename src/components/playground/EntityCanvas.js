@@ -1,9 +1,10 @@
 import React from 'react';
 import { Rnd } from 'react-rnd';
-import { PX_SCALE, BORDER_PX, INTERVAL, ENTITY_COLORS } from '../../constants';
+import { PX_SCALE, BORDER_PX, INTERVAL, ENTITY_COLORS, ENTITY_TYPES } from '../../constants';
 
 const EntityCanvas = ({
   entities,
+  occluderPieces = [],
   worldWidth,
   worldHeight,
   targetDirection,
@@ -117,6 +118,28 @@ const EntityCanvas = ({
       onClick={onCanvasClick}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* Derived occluder pieces (actual occluding geometry), rendered via Rnd for exact alignment */}
+      {occluderPieces.map((occ, index) => (
+        <Rnd
+          key={`occ-piece-${index}`}
+          size={{
+            width: occ.width * px_scale,
+            height: occ.height * px_scale,
+          }}
+          position={{
+            x: occ.x * px_scale + border_px,
+            y: (worldHeight - occ.y - occ.height) * px_scale + border_px,
+          }}
+          enableResizing={false}
+          disableDragging
+          style={{
+            backgroundColor: ENTITY_COLORS.occluder,
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        />
+      ))}
+
       {entities.map((entity) => (
         <React.Fragment key={entity.id}>
           <Rnd
@@ -128,15 +151,27 @@ const EntityCanvas = ({
               x: entity.x * px_scale + border_px,
               y: (worldHeight - entity.y - entity.height) * px_scale + border_px,
             }}
+            onDrag={(e, d) => onEntityDragStop(entity, d)}
             onDragStop={(e, d) => onEntityDragStop(entity, d)}
+            onResize={(e, direction, ref, delta, position) => onEntityResizeStop(entity, ref, position)}
             onResizeStop={(e, direction, ref, delta, position) => onEntityResizeStop(entity, ref, position)}
             bounds="parent"
             grid={[interval * px_scale, interval * px_scale]}
             enableResizing={entity.type !== "target"}
             style={{
-              backgroundColor: ENTITY_COLORS[entity.type] || "#6b7280",
+              backgroundColor:
+                entity.type === ENTITY_TYPES.WINDOW
+                  ? "transparent"
+                  : entity.type === ENTITY_TYPES.OCCLUDER
+                  ? "transparent"
+                  : ENTITY_COLORS[entity.type] || "#6b7280",
               borderRadius: entity.type === "target" ? "50%" : "0px",
-              border: "0px solid black",
+              border:
+                entity.type === ENTITY_TYPES.WINDOW
+                  ? "1px solid #000000"
+                  : entity.type === ENTITY_TYPES.OCCLUDER
+                  ? "1px dashed rgba(15,23,42,0.6)"
+                  : "0px solid black",
               cursor: "move",
               boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
             }}

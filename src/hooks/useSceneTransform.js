@@ -83,12 +83,13 @@ export const useSceneTransform = (entities, setEntities, worldWidth, worldHeight
         const newEntityCenterX = newRelX + centerX;
         const newEntityCenterY = newRelY + centerY;
 
-        // For barriers, occluders, and sensors, swap width and height when rotating
+        // For barriers, occluders, sensors, and windows, swap width and height when rotating
         // Targets are circular so they keep their dimensions
         let newWidth = entity.width;
         let newHeight = entity.height;
         if (entity.type === 'barrier' || entity.type === 'occluder' || 
-            entity.type === 'red_sensor' || entity.type === 'green_sensor') {
+            entity.type === 'red_sensor' || entity.type === 'green_sensor' ||
+            entity.type === 'window') {
           newWidth = entity.height;
           newHeight = entity.width;
         }
