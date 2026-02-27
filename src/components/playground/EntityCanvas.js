@@ -151,6 +151,8 @@ const EntityCanvas = ({
               x: entity.x * px_scale + border_px,
               y: (worldHeight - entity.y - entity.height) * px_scale + border_px,
             }}
+            minWidth={entity.type === "target" ? px_scale : interval * px_scale}
+            minHeight={entity.type === "target" ? px_scale : interval * px_scale}
             onDrag={(e, d) => onEntityDragStop(entity, d)}
             onDragStop={(e, d) => onEntityDragStop(entity, d)}
             onResize={(e, direction, ref, delta, position) => onEntityResizeStop(entity, ref, position)}
