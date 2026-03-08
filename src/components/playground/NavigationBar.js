@@ -59,6 +59,26 @@ const NavigationBar = ({ mode, setMode }) => {
         >
           JTAP Results
         </Link>
+        <Link
+          to="/experiment"
+          style={{
+            color: "#16a34a",
+            textDecoration: "none",
+            fontSize: "14px",
+            fontWeight: "600",
+            padding: "6px 12px",
+            borderRadius: "6px",
+            transition: "all 0.2s ease"
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#dcfce7";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "transparent";
+          }}
+        >
+          Try the Experiment
+        </Link>
       </div>
 
       {/* Mode Switcher */}

@@ -11,6 +11,7 @@ import CandidateTrialsPage from './components/CandidateTrialsPage';
 import DiameterTrialByTrialPage from './components/DiameterTrialByTrialPage';
 import DiameterAggregatedPage from './components/DiameterAggregatedPage';
 import CardinalDirectionAnalysisPage from './components/CardinalDirectionAnalysisPage';
+import ExperimentLaunchPage from './components/ExperimentLaunchPage';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -27,6 +28,7 @@ root.render(
         <Route path="/jtap/diameter/:diameter/trial-by-trial" element={<DiameterTrialByTrialPage />} />
         <Route path="/jtap/diameter/:diameter/aggregated" element={<DiameterAggregatedPage />} />
         <Route path="/jtap/cardinal-direction-analysis" element={<CardinalDirectionAnalysisPage />} />
+        <Route path="/experiment" element={<ExperimentLaunchPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
