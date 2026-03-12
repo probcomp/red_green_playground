@@ -138,7 +138,7 @@ function ExperimentLaunchPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Lord Arijit"
+            placeholder="e.g. Max Verstappen"
             required
             autoFocus
             style={{
