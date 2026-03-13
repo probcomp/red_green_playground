@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-const EXPERIMENT_BASE_URL = 'https://redgreen-exp-5c7f14931f81.herokuapp.com/march2026v0/';
+const EXPERIMENT_BASE_URL = 'https://redgreen-exp-5c7f14931f81.herokuapp.com/rgplayground/';
 
 function formatProlificPid(name, date) {
   const trimmed = String(name || '').trim();
