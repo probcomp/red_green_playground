@@ -113,7 +113,8 @@ const EntityCanvas = ({
         overflow: "hidden",
         flexShrink: 0,
         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-        backgroundColor: "#ffffff"
+        backgroundColor: "#ffffff",
+        colorScheme: "only light"
       }}
       onClick={onCanvasClick}
       onContextMenu={(e) => e.preventDefault()}
