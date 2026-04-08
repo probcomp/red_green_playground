@@ -42,6 +42,10 @@ const compareTrialNames = (a, b) => {
   return String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
 };
 
+const getBaseVideoTrialName = (trialName) => {
+  return String(trialName || '').replace(/_rep\d+$/i, '');
+};
+
 function TrialByTrialPage({
   backTo = '/jtap/cogsci2025-tuned',
   backLabel = '← Back to Cogsci 2025 Tuned Results',
@@ -1030,7 +1034,7 @@ function TrialByTrialPage({
                 }}>
                   <video
                     key={selectedTrial} // Force re-render when trial changes
-                    src={`${ASSETS_BASE_PATH}/${assetFolder}/${selectedTrial}_stimulus.mp4`}
+                    src={`${ASSETS_BASE_PATH}/${assetFolder}/${getBaseVideoTrialName(selectedTrial)}_stimulus.mp4`}
                     controls
                     style={{
                       width: '100%',
