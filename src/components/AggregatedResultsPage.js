@@ -60,7 +60,15 @@ const getCaption = (filename) => {
   return captions[filename] || 'Caption not found';
 };
 
-function AggregatedResultsPage() {
+const DEFAULT_ASSET_FOLDER = 'cogsci_2025_trials_tuned_Jan102026';
+
+function AggregatedResultsPage({
+  backTo = '/jtap/cogsci2025-tuned',
+  backLabel = '← Back to Cogsci 2025 Tuned Results',
+  pageTitle = 'Aggregated Results',
+  introText = 'These plots are primarily for our internal analysis, but if we think they are appropriate for the audience, they could be candidate figures for the paper (post any improvements/clarifications we think is necessary).',
+  assetFolder = DEFAULT_ASSET_FOLDER
+} = {}) {
   const [selectedImage, setSelectedImage] = useState(null);
 
   // Handle keyboard navigation
@@ -121,7 +129,7 @@ function AggregatedResultsPage() {
         borderBottom: '2px solid #e2e8f0'
       }}>
         <Link 
-          to="/jtap/cogsci2025-tuned" 
+          to={backTo} 
           style={{ 
             color: '#3b82f6',
             textDecoration: 'none',
@@ -142,7 +150,7 @@ function AggregatedResultsPage() {
             e.target.style.transform = 'translateY(0)';
           }}
         >
-          ← Back to Cogsci 2025 Tuned Results
+          {backLabel}
         </Link>
       </div>
 
@@ -158,14 +166,14 @@ function AggregatedResultsPage() {
           marginBottom: '16px',
           letterSpacing: '-0.025em'
         }}>
-          Aggregated Results
+          {pageTitle}
         </h1>
         <p style={{
           fontSize: '20px',
           color: '#64748b',
           lineHeight: '1.6'
         }}>
-          These plots are primarily for our internal analysis, but if we think they are appropriate for the audience, they could be candidate figures for the paper (post any improvements/clarifications we think is necessary).
+          {introText}
         </p>
       </div>
 
@@ -206,7 +214,7 @@ function AggregatedResultsPage() {
             }}
           >
             <img
-              src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${filename}`}
+              src={`${ASSETS_BASE_PATH}/${assetFolder}/${filename}`}
               alt={getTitleFromFilename(filename)}
               style={{
                 width: '100%',
@@ -391,7 +399,7 @@ function AggregatedResultsPage() {
 
             {/* Image */}
             <img
-              src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${selectedImage}`}
+              src={`${ASSETS_BASE_PATH}/${assetFolder}/${selectedImage}`}
               alt={getTitleFromFilename(selectedImage)}
               style={{
                 maxWidth: '100%',

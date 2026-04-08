@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ASSETS_BASE_PATH } from '../constants';
 import {
   metricNameMap,
@@ -9,7 +9,52 @@ import {
   computeSortedTrials
 } from '../utils/jtapMetrics';
 
-function TrialByTrialPage() {
+const DEFAULT_ASSET_FOLDER = 'cogsci_2025_trials_tuned_Jan102026';
+const DEFAULT_TRIALS = Array.from({ length: 50 }, (_, i) => `E${i + 1}`);
+
+const compareTrialNames = (a, b) => {
+  const pattern = /(\d+|\D+)/g;
+  const aParts = String(a).match(pattern) || [String(a)];
+  const bParts = String(b).match(pattern) || [String(b)];
+  const length = Math.max(aParts.length, bParts.length);
+
+  for (let i = 0; i < length; i++) {
+    const aPart = aParts[i];
+    const bPart = bParts[i];
+
+    if (aPart === undefined) return -1;
+    if (bPart === undefined) return 1;
+
+    const aNum = Number(aPart);
+    const bNum = Number(bPart);
+    const aIsNum = !Number.isNaN(aNum) && /^\d+$/.test(aPart);
+    const bIsNum = !Number.isNaN(bNum) && /^\d+$/.test(bPart);
+
+    if (aIsNum && bIsNum) {
+      if (aNum !== bNum) return aNum - bNum;
+      continue;
+    }
+
+    const alphaCompare = aPart.localeCompare(bPart, undefined, { sensitivity: 'base' });
+    if (alphaCompare !== 0) return alphaCompare;
+  }
+
+  return String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+};
+
+function TrialByTrialPage({
+  backTo = '/jtap/cogsci2025-tuned',
+  backLabel = '← Back to Cogsci 2025 Tuned Results',
+  pageTitle = 'Trial-by-Trial Plots',
+  introText = 'In each plot, you will see a dark gray and light gray region. The dark gray region means that the ball if fully occluded, while the light gray region means that the ball is partially occluded. Any other region implies that the ball is fully visible.',
+  assetFolder = DEFAULT_ASSET_FOLDER,
+  metricsEndpoint = '/metrics_csv',
+  trialGroups = null,
+  defaultGroup = 'all',
+  groupPanelTitle = 'Analyze by group',
+  groupPanelIntro = 'Start with one of the analysis groups, or switch to all trials when you want the full set.'
+} = {}) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTrial, setSelectedTrial] = useState(null);
   const [hidePlotInitially, setHidePlotInitially] = useState(false);
   const [plotRevealed, setPlotRevealed] = useState(false);
@@ -18,7 +63,73 @@ function TrialByTrialPage() {
   const [metricsData, setMetricsData] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState(null);
-  const allTrials = Array.from({ length: 50 }, (_, i) => `E${i + 1}`);
+  const [selectedGroup, setSelectedGroup] = useState(() => searchParams.get('group') || defaultGroup);
+
+  useEffect(() => {
+    const nextGroup = searchParams.get('group') || defaultGroup;
+    setSelectedGroup(nextGroup);
+  }, [defaultGroup, searchParams]);
+
+  const groupDefs = useMemo(() => trialGroups || [], [trialGroups]);
+
+  const allTrials = useMemo(() => {
+    if (!metricsData) {
+      return [];
+    }
+
+    const trialNames = new Set();
+    Object.values(metricsData).forEach((metric) => {
+      Object.keys(metric?.data || {}).forEach((trialName) => trialNames.add(trialName));
+    });
+
+    const derivedTrials = Array.from(trialNames).sort(compareTrialNames);
+    return derivedTrials.length > 0 ? derivedTrials : DEFAULT_TRIALS;
+  }, [metricsData]);
+
+  const activeTrials = useMemo(() => {
+    if (!groupDefs.length || selectedGroup === 'all') {
+      return allTrials;
+    }
+
+    const selectedDef = groupDefs.find((group) => group.key === selectedGroup);
+    if (!selectedDef) {
+      return allTrials;
+    }
+
+    if (selectedDef.key === 'remaining') {
+      const otherGroups = groupDefs.filter((group) => group.key !== 'remaining');
+      return allTrials.filter((trialName) => !otherGroups.some((group) => group.matchTrial(trialName)));
+    }
+
+    return allTrials.filter((trialName) => selectedDef.matchTrial(trialName));
+  }, [allTrials, groupDefs, selectedGroup]);
+
+  const groupTrialCounts = useMemo(() => {
+    if (!groupDefs.length) {
+      return [];
+    }
+
+    return groupDefs.map((group) => ({
+      ...group,
+      trialCount: group.key === 'remaining'
+        ? allTrials.filter((trialName) => {
+            const others = groupDefs.filter((candidate) => candidate.key !== 'remaining');
+            return !others.some((candidate) => candidate.matchTrial(trialName));
+          }).length
+        : allTrials.filter((trialName) => group.matchTrial(trialName)).length
+    }));
+  }, [allTrials, groupDefs]);
+
+  const handleGroupChange = (groupKey) => {
+    setSelectedGroup(groupKey);
+    const nextParams = new URLSearchParams(searchParams);
+    if (groupKey === 'all') {
+      nextParams.delete('group');
+    } else {
+      nextParams.set('group', groupKey);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   // Load metrics from CSV on component mount
   useEffect(() => {
@@ -27,7 +138,7 @@ function TrialByTrialPage() {
         setMetricsLoading(true);
         setMetricsError(null);
 
-        const parsedData = await fetchAndParseMetricsCsv('/metrics_csv');
+        const parsedData = await fetchAndParseMetricsCsv(metricsEndpoint);
         setMetricsData(parsedData);
       } catch (error) {
         console.error('Error loading metrics:', error);
@@ -38,12 +149,12 @@ function TrialByTrialPage() {
     };
 
     loadMetrics();
-  }, []);
+  }, [metricsEndpoint]);
 
   // Compute sorted trials based on selected metric
   const { sortedTrials, trialRankings, trialLosses } = useMemo(() => {
-    return computeSortedTrials({ metricsData, selectedMetric, allTrials });
-  }, [selectedMetric, allTrials, metricsData]);
+    return computeSortedTrials({ metricsData, selectedMetric, allTrials: activeTrials });
+  }, [activeTrials, selectedMetric, metricsData]);
 
   const trials = sortedTrials;
 
@@ -109,7 +220,7 @@ function TrialByTrialPage() {
         borderBottom: '2px solid #e2e8f0'
       }}>
         <Link 
-          to="/jtap/cogsci2025-tuned" 
+          to={backTo} 
           style={{ 
             color: '#3b82f6',
             textDecoration: 'none',
@@ -130,7 +241,7 @@ function TrialByTrialPage() {
             e.target.style.transform = 'translateY(0)';
           }}
         >
-          ← Back to Cogsci 2025 Tuned Results
+          {backLabel}
         </Link>
       </div>
 
@@ -146,16 +257,150 @@ function TrialByTrialPage() {
           marginBottom: '16px',
           letterSpacing: '-0.025em'
         }}>
-          Trial-by-Trial Plots
+          {pageTitle}
         </h1>
         <p style={{
           fontSize: '20px',
           color: '#64748b',
           lineHeight: '1.6'
         }}>
-          In each plot, you will see a dark gray and light gray region. The dark gray region means that the ball if fully occluded, while the light gray region means that the ball is partially occluded. Any other region implies that the ball is fully visible.
+          {introText}
         </p>
       </div>
+
+      {groupDefs.length > 0 && (
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto 40px auto',
+          padding: '24px',
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          border: '2px solid #e2e8f0',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+        }}>
+          <div style={{
+            marginBottom: '16px'
+          }}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#1e293b',
+              margin: 0,
+              marginBottom: '8px'
+            }}>
+              {groupPanelTitle}
+            </h2>
+            <p style={{
+              fontSize: '16px',
+              color: '#64748b',
+              margin: 0,
+              lineHeight: '1.6'
+            }}>
+              {groupPanelIntro}
+            </p>
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '16px'
+          }}>
+            <div
+              onClick={() => handleGroupChange('all')}
+              style={{
+                cursor: 'pointer',
+                backgroundColor: selectedGroup === 'all' ? '#eff6ff' : '#ffffff',
+                borderRadius: '12px',
+                padding: '20px',
+                border: `2px solid ${selectedGroup === 'all' ? '#3b82f6' : '#e2e8f0'}`,
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedGroup !== 'all') {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedGroup !== 'all') {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }
+              }}
+            >
+              <div style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: '#1e293b'
+              }}>
+                All trials
+              </div>
+              <div style={{
+                fontSize: '14px',
+                color: '#64748b',
+                lineHeight: '1.5'
+              }}>
+                View the full pilot set in one place.
+              </div>
+            </div>
+            {groupTrialCounts.map((group) => (
+              <div
+                key={group.key}
+                onClick={() => handleGroupChange(group.key)}
+                style={{
+                  cursor: 'pointer',
+                  backgroundColor: selectedGroup === group.key ? '#eff6ff' : '#ffffff',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: `2px solid ${selectedGroup === group.key ? '#3b82f6' : '#e2e8f0'}`,
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedGroup !== group.key) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedGroup !== group.key) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }
+                }}
+              >
+                <div style={{
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  color: '#1e293b'
+                }}>
+                  {group.label}
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: '#64748b',
+                  lineHeight: '1.5'
+                }}>
+                  {group.description}
+                </div>
+                <div style={{
+                  fontSize: '13px',
+                  color: '#3b82f6',
+                  fontWeight: '600'
+                }}>
+                  {group.trialCount} trials
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Toggle for Hide Plot Initially */}
       <div style={{
@@ -464,7 +709,7 @@ function TrialByTrialPage() {
                 </div>
               )}
               <img
-                src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${trialName}_trajectory.png`}
+                src={`${ASSETS_BASE_PATH}/${assetFolder}/${trialName}_trajectory.png`}
                 alt={`${trialName} trajectory`}
                 style={{
                   width: '100%',
@@ -745,7 +990,7 @@ function TrialByTrialPage() {
                   </div>
                 ) : (
                   <img
-                    src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${selectedTrial}_plot.png`}
+                    src={`${ASSETS_BASE_PATH}/${assetFolder}/${selectedTrial}_plot.png`}
                     alt={`${selectedTrial} plot`}
                     style={{
                       width: '100%',
@@ -785,7 +1030,7 @@ function TrialByTrialPage() {
                 }}>
                   <video
                     key={selectedTrial} // Force re-render when trial changes
-                    src={`${ASSETS_BASE_PATH}/cogsci_2025_trials_tuned_Jan102026/${selectedTrial}_stimulus.mp4`}
+                    src={`${ASSETS_BASE_PATH}/${assetFolder}/${selectedTrial}_stimulus.mp4`}
                     controls
                     style={{
                       width: '100%',
@@ -832,4 +1077,3 @@ function TrialByTrialPage() {
 }
 
 export default TrialByTrialPage;
-

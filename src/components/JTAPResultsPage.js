@@ -135,6 +135,7 @@ function JTAPResultsPage() {
           </div>
           </Link>
 
+          {/*
           <Link
             to="/jtap/candidate-trials"
             style={{
@@ -194,6 +195,7 @@ function JTAPResultsPage() {
             </p>
           </div>
           </Link>
+          */}
         </div>
 
         {/* Extra Results Section – diameter and other analyses */}
@@ -213,7 +215,7 @@ function JTAPResultsPage() {
           marginBottom: '24px',
           lineHeight: '1.6'
         }}>
-          Additional analyses beyond the main tuned and candidate trial results, including diameter variations and cardinal direction analyses.
+          Additional analyses beyond the main tuned trial results, including diameter variations, the Experiment 1 pilot, and cardinal direction analyses.
         </p>
 
         <div style={{
@@ -338,6 +340,120 @@ function JTAPResultsPage() {
             </div>
           </div>
 
+          {/* Experiment 1 Pilot card */}
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '28px',
+              border: '2px solid #e2e8f0',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.borderColor = '#cbd5e1';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+            }}
+          >
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1e293b',
+              margin: 0,
+              lineHeight: '1.2'
+            }}>
+              Experiment 1 Pilot
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#64748b',
+              margin: 0
+            }}>
+              Pilot Data for Experiment 1 (20 participants)
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginTop: '4px'
+            }}>
+              <Link
+                to="/jtap/experiment-1-pilot"
+                style={{
+                  flex: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  minWidth: 0
+                }}
+              >
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#eff6ff',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#3b82f6',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                >
+                  Trial Groups
+                </div>
+              </Link>
+              <Link
+                to="/jtap/experiment-1-pilot/aggregated"
+                style={{
+                  flex: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  minWidth: 0
+                }}
+              >
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f3e8ff',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#8b5cf6',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e9d5ff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3e8ff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                >
+                  Aggregated
+                </div>
+              </Link>
+            </div>
+          </div>
+
           {/* Cardinal direction analysis card */}
           <Link
             to="/jtap/cardinal-direction-analysis"
@@ -401,4 +517,3 @@ function JTAPResultsPage() {
 }
 
 export default JTAPResultsPage;
-

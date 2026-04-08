@@ -7,7 +7,9 @@ import JTAPResultsPage from './components/JTAPResultsPage';
 import Cogsci2025TunedPage from './components/Cogsci2025TunedPage';
 import TrialByTrialPage from './components/TrialByTrialPage';
 import AggregatedResultsPage from './components/AggregatedResultsPage';
-import CandidateTrialsPage from './components/CandidateTrialsPage';
+import Experiment1PilotPage from './components/Experiment1PilotPage';
+import Experiment1PilotTrialByTrialPage from './components/Experiment1PilotTrialByTrialPage';
+import Experiment1PilotAggregatedPage from './components/Experiment1PilotAggregatedPage';
 import DiameterTrialByTrialPage from './components/DiameterTrialByTrialPage';
 import DiameterAggregatedPage from './components/DiameterAggregatedPage';
 import CardinalDirectionAnalysisPage from './components/CardinalDirectionAnalysisPage';
@@ -24,7 +26,11 @@ root.render(
         <Route path="/jtap/cogsci2025-tuned" element={<Cogsci2025TunedPage />} />
         <Route path="/jtap/cogsci2025-tuned/trial-by-trial" element={<TrialByTrialPage />} />
         <Route path="/jtap/cogsci2025-tuned/aggregated" element={<AggregatedResultsPage />} />
-        <Route path="/jtap/candidate-trials" element={<CandidateTrialsPage />} />
+        <Route path="/jtap/experiment-1-pilot" element={<Experiment1PilotPage />} />
+        <Route path="/jtap/experiment-1-pilot/trial-by-trial" element={<Experiment1PilotTrialByTrialPage />} />
+        <Route path="/jtap/experiment-1-pilot/aggregated" element={<Experiment1PilotAggregatedPage />} />
+        {/* Candidate trials page intentionally hidden from the app UI for now. */}
+        {/* <Route path="/jtap/candidate-trials" element={<CandidateTrialsPage />} /> */}
         <Route path="/jtap/diameter/:diameter/trial-by-trial" element={<DiameterTrialByTrialPage />} />
         <Route path="/jtap/diameter/:diameter/aggregated" element={<DiameterAggregatedPage />} />
         <Route path="/jtap/cardinal-direction-analysis" element={<CardinalDirectionAnalysisPage />} />
