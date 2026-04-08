@@ -53,11 +53,7 @@ function TrialByTrialPage({
   introText = 'In each plot, you will see a dark gray and light gray region. The dark gray region means that the ball if fully occluded, while the light gray region means that the ball is partially occluded. Any other region implies that the ball is fully visible.',
   assetFolder = DEFAULT_ASSET_FOLDER,
   metricsEndpoint = '/metrics_csv',
-  trialDiscoveryEndpoint = null,
-  trialDiscoveryStart = 1,
-  trialDiscoveryEnd = 70,
-  trialDiscoveryPrefix = 'E',
-  trialDiscoverySuffix = '_trajectory.png',
+  trialSeedTrials = [],
   trialGroups = null,
   defaultGroup = 'all',
   groupPanelTitle = 'Analyze by stimulus set',
@@ -72,9 +68,6 @@ function TrialByTrialPage({
   const [metricsData, setMetricsData] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState(null);
-  const [discoveredTrials, setDiscoveredTrials] = useState([]);
-  const [discoveryLoading, setDiscoveryLoading] = useState(false);
-  const [discoveryError, setDiscoveryError] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(() => searchParams.get('group') || defaultGroup);
 
   useEffect(() => {
@@ -93,11 +86,11 @@ function TrialByTrialPage({
       });
     }
 
-    discoveredTrials.forEach((trialName) => trialNames.add(trialName));
+    trialSeedTrials.forEach((trialName) => trialNames.add(trialName));
 
     const derivedTrials = Array.from(trialNames).sort(compareTrialNames);
     return derivedTrials.length > 0 ? derivedTrials : DEFAULT_TRIALS;
-  }, [discoveredTrials, metricsData]);
+  }, [metricsData, trialSeedTrials]);
 
   const activeTrials = useMemo(() => {
     if (!groupDefs.length || selectedGroup === 'all') {
@@ -164,53 +157,12 @@ function TrialByTrialPage({
     loadMetrics();
   }, [metricsEndpoint]);
 
-  useEffect(() => {
-    if (!trialDiscoveryEndpoint) {
-      setDiscoveredTrials([]);
-      setDiscoveryLoading(false);
-      setDiscoveryError(null);
-      return;
-    }
-
-    const loadDiscoveredTrials = async () => {
-      try {
-        setDiscoveryLoading(true);
-        setDiscoveryError(null);
-
-        const params = new URLSearchParams({
-          asset_folder: assetFolder,
-          prefix: trialDiscoveryPrefix,
-          start: String(trialDiscoveryStart),
-          end: String(trialDiscoveryEnd),
-          suffix: trialDiscoverySuffix
-        });
-
-        const response = await fetch(`${trialDiscoveryEndpoint}?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to discover trials: ${response.status} ${response.statusText}`);
-        }
-
-        const payload = await response.json();
-        setDiscoveredTrials(Array.isArray(payload.trials) ? payload.trials : []);
-      } catch (error) {
-        console.error('Error discovering trials:', error);
-        setDiscoveryError(error.message);
-        setDiscoveredTrials([]);
-      } finally {
-        setDiscoveryLoading(false);
-      }
-    };
-
-    loadDiscoveredTrials();
-  }, [assetFolder, trialDiscoveryEnd, trialDiscoveryEndpoint, trialDiscoveryPrefix, trialDiscoveryStart, trialDiscoverySuffix]);
-
   // Compute sorted trials based on selected metric
   const { sortedTrials, trialRankings, trialLosses } = useMemo(() => {
     return computeSortedTrials({ metricsData, selectedMetric, allTrials: activeTrials });
   }, [activeTrials, selectedMetric, metricsData]);
 
   const trials = sortedTrials;
-  const hasDiscoveryData = !!trialDiscoveryEndpoint;
 
   const navigateTrial = (direction) => {
     if (selectedTrial === null) return;
@@ -678,24 +630,6 @@ function TrialByTrialPage({
             marginLeft: 'auto'
           }}>
             Error loading metrics: {metricsError}
-          </div>
-        )}
-        {hasDiscoveryData && discoveryLoading && (
-          <div style={{
-            fontSize: '14px',
-            color: '#64748b',
-            marginLeft: 'auto'
-          }}>
-            Discovering trials...
-          </div>
-        )}
-        {hasDiscoveryData && discoveryError && (
-          <div style={{
-            fontSize: '14px',
-            color: '#dc2626',
-            marginLeft: 'auto'
-          }}>
-            Error discovering trials: {discoveryError}
           </div>
         )}
         {selectedMetric && (

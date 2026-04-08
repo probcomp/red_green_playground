@@ -3,6 +3,14 @@ const parseTrialNumber = (trialName) => {
   return match ? parseInt(match[1], 10) : null;
 };
 
+const expandVariants = (baseTrials, variants) => {
+  return baseTrials.flatMap((trial) => variants.map((variant) => `${trial}${variant}`));
+};
+
+const repeatTrials = (baseTrials, repeats) => {
+  return baseTrials.flatMap((trial) => repeats.map((repeat) => `${trial}_rep${repeat}`));
+};
+
 export const EXPERIMENT_1_PILOT_GROUPS = [
   {
     key: 'initial-direction',
@@ -67,3 +75,14 @@ export const getExperiment1PilotGroup = (trialName) => {
   const key = getExperiment1PilotGroupKey(trialName);
   return EXPERIMENT_1_PILOT_GROUPS.find((group) => group.key === key) || null;
 };
+
+export const EXPERIMENT_1_PILOT_TRIALS = [
+  ...expandVariants(['T1', 'T2', 'T3'], ['A', 'B', 'C', 'D']),
+  ...expandVariants(['T4', 'T5'], ['A', 'B', 'C', 'D', 'E', 'F']),
+  ...expandVariants(['T6', 'T7', 'T8'], ['A', 'B', 'C', 'D']),
+  ...repeatTrials(['T17', 'T20', 'T28'], [0, 1, 2, 3, 4]),
+  'T31',
+  'T32',
+  'T33',
+  'T34'
+];

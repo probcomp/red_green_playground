@@ -386,7 +386,7 @@ function JTAPResultsPage() {
               marginTop: '4px'
             }}>
               <Link
-                to="/jtap/experiment-1-pilot"
+                to="/jtap/experiment-1-pilot/trial-by-trial?group=all"
                 style={{
                   flex: 1,
                   textDecoration: 'none',
@@ -415,7 +415,7 @@ function JTAPResultsPage() {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
                 >
-                  Trial Groups
+                  All trials
                 </div>
               </Link>
               <Link
