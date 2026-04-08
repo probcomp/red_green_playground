@@ -709,6 +709,56 @@ def get_metrics_csv():
         print(f"Error fetching CSV from S3: {e}")
         return jsonify({"error": f"Failed to fetch CSV: {str(e)}"}), 500
 
+@app.route('/available_trials', methods=['GET'])
+def get_available_trials():
+    """
+    Probe S3 for available trial assets and return the trial names that exist.
+
+    Query parameters:
+    - asset_folder: Required. S3 folder containing the trial assets.
+    - prefix: Optional. Trial name prefix, defaults to "T".
+    - start: Optional. First trial number to probe, defaults to 1.
+    - end: Optional. Last trial number to probe, defaults to 70.
+    - suffix: Optional. Asset filename suffix to probe, defaults to "_trajectory.png".
+    """
+    try:
+        asset_folder = request.args.get('asset_folder')
+        if not asset_folder:
+            return jsonify({"error": "asset_folder is required"}), 400
+
+        prefix = request.args.get('prefix', 'T')
+        start = int(request.args.get('start', '1'))
+        end = int(request.args.get('end', '70'))
+        suffix = request.args.get('suffix', '_trajectory.png')
+
+        if end < start:
+            return jsonify({"error": "end must be greater than or equal to start"}), 400
+
+        base_url = f'https://redgreenplayground.s3.us-east-2.amazonaws.com/site_static_assets/{asset_folder}'
+
+        def probe_trial(trial_name):
+            url = f'{base_url}/{trial_name}{suffix}'
+            try:
+                response = requests.head(url, timeout=5)
+                if response.status_code == 200:
+                    return trial_name
+            except requests.exceptions.RequestException:
+                pass
+            return None
+
+        trial_names = [f'{prefix}{i}' for i in range(start, end + 1)]
+        available_trials = [name for name in (probe_trial(trial_name) for trial_name in trial_names) if name]
+
+        return jsonify({
+            "asset_folder": asset_folder,
+            "trials": available_trials
+        }), 200
+    except ValueError as e:
+        return jsonify({"error": f"Invalid numeric parameter: {str(e)}"}), 400
+    except Exception as e:
+        print(f"Error probing available trials: {e}")
+        return jsonify({"error": f"Failed to probe available trials: {str(e)}"}), 500
+
 @app.route('/convert_to_mp4', methods=['POST'])
 def convert_to_mp4():
     """
