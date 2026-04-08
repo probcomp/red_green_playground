@@ -61,7 +61,7 @@ function Experiment1PilotPage() {
           lineHeight: '1.6',
           marginBottom: '24px'
         }}>
-          The pilot set is organized into four analysis groups plus a remaining-trials bucket. Start with a group, then switch to all trials if you want the full set.
+          The pilot set is organized into four stimulus sets plus a remaining-trials bucket. Start with a stimulus set, then switch to all trials if you want the full set.
         </p>
 
         <div style={{

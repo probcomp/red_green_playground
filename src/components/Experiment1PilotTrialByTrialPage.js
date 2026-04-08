@@ -13,8 +13,8 @@ function Experiment1PilotTrialByTrialPage() {
       metricsEndpoint="/metrics_csv?asset_folder=jtap_experiment_1_pilot_v1"
       trialGroups={EXPERIMENT_1_PILOT_GROUPS}
       defaultGroup="initial-direction"
-      groupPanelTitle="Pilot analysis groups"
-      groupPanelIntro="Start with one of the grouped analysis sets below, or switch to all trials when you want the full pilot set."
+      groupPanelTitle="Pilot stimulus sets"
+      groupPanelIntro="Start with one of the stimulus sets below, or switch to all trials when you want the full pilot set."
     />
   );
 }

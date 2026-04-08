@@ -51,8 +51,8 @@ function TrialByTrialPage({
   metricsEndpoint = '/metrics_csv',
   trialGroups = null,
   defaultGroup = 'all',
-  groupPanelTitle = 'Analyze by group',
-  groupPanelIntro = 'Start with one of the analysis groups, or switch to all trials when you want the full set.'
+  groupPanelTitle = 'Analyze by stimulus set',
+  groupPanelIntro = 'Start with one of the stimulus sets, or switch to all trials when you want the full set.'
 } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTrial, setSelectedTrial] = useState(null);
