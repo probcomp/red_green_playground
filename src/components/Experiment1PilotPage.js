@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ASSETS_BASE_PATH } from '../constants';
 import { EXPERIMENT_1_PILOT_GROUPS } from './experiment1PilotGroups';
 
 function Experiment1PilotPage() {
@@ -166,35 +165,6 @@ function Experiment1PilotPage() {
               </div>
             </Link>
           ))}
-        </div>
-
-        <div style={{
-          marginTop: '32px',
-          padding: '20px',
-          borderRadius: '12px',
-          backgroundColor: '#ffffff',
-          border: '2px solid #e2e8f0'
-        }}>
-          <p style={{
-            margin: 0,
-            fontSize: '15px',
-            color: '#64748b',
-            lineHeight: '1.6'
-          }}>
-            The underlying plots and videos are loaded from `jtap_experiment_1_pilot_v1`.
-          </p>
-          <div style={{ marginTop: '12px' }}>
-            <img
-              src={`${ASSETS_BASE_PATH}/with_occlusion.gif`}
-              alt="Example stimulus trajectory GIF"
-              style={{
-                width: '160px',
-                height: 'auto',
-                borderRadius: '8px',
-                border: '0.5px solid #000000'
-              }}
-            />
-          </div>
         </div>
       </div>
     </div>
