@@ -43,20 +43,30 @@ export const EXPERIMENT_1_PILOT_GROUPS = [
     }
   },
   {
-    key: 'practice-control',
-    label: 'Practice Effects Control',
+    key: 'practice-effects',
+    label: 'Practice Effects',
     expectedCount: 15,
-    description: 'The same underlying scene is repeated with flips and rotations to check for practice effects over time.',
+    description: 'The same underlying scene is repeated across T9 to T11 with flips and rotations to check for practice effects over time.',
     matchTrial: (trialName) => {
       const n = parseTrialNumber(trialName);
-      return n === 17 || n === 20 || n === 28;
+      return n !== null && n >= 9 && n <= 11;
+    }
+  },
+  {
+    key: 'catch-trials',
+    label: 'Catch Trials',
+    expectedCount: 5,
+    description: 'Catch trials used to check participant attention and response consistency.',
+    matchTrial: (trialName) => {
+      const n = parseTrialNumber(trialName);
+      return n !== null && n >= 30 && n <= 34;
     }
   },
   {
     key: 'remaining',
     label: 'Remaining Trials',
     expectedCount: 19,
-    description: 'The remaining pilot trials that do not fall into the four primary analysis groups.',
+    description: 'The remaining pilot trials that do not fall into the five primary analysis groups.',
     matchTrial: () => true
   }
 ];
@@ -80,7 +90,8 @@ export const EXPERIMENT_1_PILOT_TRIALS = [
   ...expandVariants(['T1', 'T2', 'T3'], ['A', 'B', 'C', 'D']),
   ...expandVariants(['T4', 'T5'], ['A', 'B', 'C', 'D', 'E', 'F']),
   ...expandVariants(['T6', 'T7', 'T8'], ['A', 'B', 'C', 'D']),
-  ...repeatTrials(['T17', 'T20', 'T28'], [0, 1, 2, 3, 4]),
+  ...repeatTrials(['T9', 'T10', 'T11'], [0, 1, 2, 3, 4]),
+  'T30',
   'T31',
   'T32',
   'T33',
