@@ -103,6 +103,10 @@ function TrialByTrialPage({
     }
 
     if (selectedDef.key === 'remaining') {
+      if (typeof selectedDef.matchTrial === 'function') {
+        return allTrials.filter((trialName) => selectedDef.matchTrial(trialName));
+      }
+
       const otherGroups = groupDefs.filter((group) => group.key !== 'remaining');
       return allTrials.filter((trialName) => !otherGroups.some((group) => group.matchTrial(trialName)));
     }
@@ -119,6 +123,10 @@ function TrialByTrialPage({
       ...group,
       trialCount: group.key === 'remaining'
         ? allTrials.filter((trialName) => {
+            if (typeof group.matchTrial === 'function') {
+              return group.matchTrial(trialName);
+            }
+
             const others = groupDefs.filter((candidate) => candidate.key !== 'remaining');
             return !others.some((candidate) => candidate.matchTrial(trialName));
           }).length

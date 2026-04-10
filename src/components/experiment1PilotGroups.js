@@ -65,9 +65,12 @@ export const EXPERIMENT_1_PILOT_GROUPS = [
   {
     key: 'remaining',
     label: 'Remaining Trials',
-    expectedCount: 19,
-    description: 'The remaining pilot trials that do not fall into the five primary analysis groups.',
-    matchTrial: () => true
+    expectedCount: 18,
+    description: 'The remaining pilot trials, hardcoded to T12 through T29.',
+    matchTrial: (trialName) => {
+      const n = parseTrialNumber(trialName);
+      return n !== null && n >= 12 && n <= 29;
+    }
   }
 ];
 
@@ -78,7 +81,11 @@ export const getExperiment1PilotGroupKey = (trialName) => {
       return group.key;
     }
   }
-  return 'remaining';
+  const remainingGroup = EXPERIMENT_1_PILOT_GROUPS.find((group) => group.key === 'remaining');
+  if (remainingGroup?.matchTrial(trialName)) {
+    return 'remaining';
+  }
+  return null;
 };
 
 export const getExperiment1PilotGroup = (trialName) => {
@@ -90,6 +97,7 @@ export const EXPERIMENT_1_PILOT_TRIALS = [
   ...expandVariants(['T1', 'T2', 'T3'], ['A', 'B', 'C', 'D']),
   ...expandVariants(['T4', 'T5'], ['A', 'B', 'C', 'D', 'E', 'F']),
   ...expandVariants(['T6', 'T7', 'T8'], ['A', 'B', 'C', 'D']),
+  ...Array.from({ length: 18 }, (_, i) => `T${i + 12}`),
   ...repeatTrials(['T9', 'T10', 'T11'], [0, 1, 2, 3, 4]),
   'T30',
   'T31',
