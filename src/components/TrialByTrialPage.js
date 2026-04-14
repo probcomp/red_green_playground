@@ -276,7 +276,8 @@ function TrialByTrialPage({
         <p style={{
           fontSize: '20px',
           color: '#64748b',
-          lineHeight: '1.6'
+          lineHeight: '1.6',
+          whiteSpace: 'pre-line'
         }}>
           {introText}
         </p>
